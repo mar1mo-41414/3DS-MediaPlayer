@@ -82,5 +82,50 @@ class RsfTest(unittest.TestCase):
         self.assertEqual(title_line.count('"'), 2)  # タイトル中の " は除去される
 
 
+class RsfRealDeviceTest(unittest.TestCase):
+    """実機で起動するために必須の項目 (エミュレータは検査しないので、欠けると実機でだけ落ちる)。"""
+
+    def setUp(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.text = cia.write_rsf(parse_meta(GOOD), Path(d) / "app.rsf").read_text()
+
+    def test_has_syscall_access(self):
+        self.assertIn("SystemCallAccess:", self.text)
+        # libctru / ndsp が使う代表的な SVC
+        for name in ("CreateThread", "ControlMemory", "SendSyncRequest", "FlushProcessDataCache"):
+            self.assertIn(f"{name}:", self.text)
+
+    def test_has_vram_and_dsp_mappings(self):
+        self.assertIn("1f000000-1f5fffff:r", self.text)  # VRAM (citro3d の描画先)
+        self.assertIn("1ff00000-1ff7ffff", self.text)  # DSP
+
+    def test_has_required_services(self):
+        for svc in ("APT:U", "fs:USER", "gsp::Gpu", "hid:USER", "dsp::DSP", "y2r:u", "ptm:u", "cfg:u"):
+            self.assertIn(f"- {svc}", self.text)
+
+    def test_sd_access_and_logo(self):
+        self.assertIn("- DirectSdmc\n", self.text)
+        self.assertIn("- DirectSdmcWrite", self.text)
+        self.assertIn("Logo                    : Nintendo", self.text)
+
+    def test_makerom_not_given_desc_template(self):
+        """-desc app:N はテンプレート側のサービス/SVC 制限で上書きされ、実機で起動しなくなった。"""
+        calls = []
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            for n in ("a.elf", "a.rsf", "r.bin", "i.smdh", "b.bnr"):
+                (d / n).write_bytes(b"x")
+            orig = cia.run
+            cia.run = lambda cmd, log=None, cwd=None: calls.append([str(c) for c in cmd]) or ""
+            try:
+                cia.build_cia(d / "a.elf", d / "a.rsf", d / "r.bin", d / "i.smdh", d / "b.bnr",
+                              parse_meta(GOOD), d / "o.cia")
+            finally:
+                cia.run = orig
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn("-desc", calls[0])
+        self.assertIn("-exefslogo", calls[0])
+
+
 if __name__ == "__main__":
     unittest.main()

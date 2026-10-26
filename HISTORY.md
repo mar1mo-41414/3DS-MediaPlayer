@@ -75,12 +75,29 @@
   古いインスタンスに繋がって誤診の原因になった。ログ (`azahar_log.txt` の
   `HW.Memory <Error>`) とアプリ内 SD ログ (`-DDEBUG_LOG`) の方が確実だった。
 
-### 実機での最初の確認 (2026-10-26)
-- Twinkle Night / テスト CIA の両方で、起動後に ErrDisp「The SD card was removed.」が出た (実機は CFW 環境)。
-  `dspfirm.cdc` は `sdmc:/3ds/dspfirm.cdc` で正しい (無くても映像のみ再生する作りなので無関係)。
-- 疑い: 旧3DS で `APT_SetAppCpuTimeLimit(80)` としてシステムコア (FS/SD ドライバが動く) を取りすぎた。
-  → 30 に下げ、デコードスレッドの優先度をメインより低くした。原因確定は実機ログ待ち
-  (`-DDEBUG_LOG` ビルドの CIA で `sdmc:/mediaplayer.log` を確認)。
+### 実機での最初の確認 (2026-10-26) と RSF の修正
+- 旧3DS (CFW) で、Twinkle Night / テスト CIA の両方が起動直後に ErrDisp
+  「The SD card was removed.」。映像・音声は一瞬も出ず、デバッグ版でも SD にログが出なかった
+  (= `main` に入る前に落ちている)。`dspfirm.cdc` は `sdmc:/3ds/dspfirm.cdc` で正しい。
+- 最初に疑った `APT_SetAppCpuTimeLimit(80)` は的外れ (起動前に落ちているので無関係)。
+  ただし 80→30 に下げたのは安全側として残した。
+- **原因 (有力、実機での再確認待ち)**: 生成した CIA の ExHeader の権限不足。ユーザーの実機から取った
+  実績のある CIA (FBI.cia / Universal-Updater.cia) と ExHeader を自作パーサで比較して判明:
+  - SVC (システムコール) 許可マスクが f0〜f2 の 3 組しか無い (実績 CIA は f0〜f5)。
+    RSF に `SystemCallAccess` を書いておらず、さらに `makerom -desc app:4` がテンプレートで
+    サービス一覧・SVC 制限を上書きしていた (出力のサービス一覧に私の指定に無い `dlp:*`、`ldr:ro` が入り、
+    `gsp::Lcd`、`ptm:sysm` が欠けていた)。
+  - VRAM (`1f000000-1f5fffff:r`) と DSP (`1ff00000-1ff7ffff`) のメモリマッピングが無い
+    (citro3d の描画先 VRAM が使えない)。
+  - FileSystemAccess が `DirectSdmc` だけ (書き込み用の `DirectSdmcWrite` 無し → デバッグログも書けない)。
+  - `Logo: None` (定番は `Nintendo`)。
+  AzaharPlus はこれらを一切検査しないので、エミュレータでは動いて実機でだけ落ちた。
+- 修正: RSF を定番構成 (SystemCallAccess / MemoryMapping / IORegisterMapping / FileSystemAccess 全部 /
+  サービス一覧 / `Logo: Nintendo`) にし、`-desc` を外した。修正後の ExHeader が FBI と同じ構造に
+  なったことを確認 (サービス一覧、メモリマッピング、フラグ類)。makerom 0.19 では FS 権限名が
+  `TwlCard`→`TwlCardBackup`、`TwlNand`→`TwlNandData` に変わっている点に注意。
+- 教訓: **エミュレータで動く ≠ 実機で動く** (権限・SVC・メモリマップは実機のみ検査)。
+  既存の実績 CIA があれば ExHeader を比較するのが最も確実。`tool/tests` に RSF の必須項目テストを追加。
 
 ## 未解決・今後
 - **実機未確認**。旧3DS での性能 (デコードが間に合うか)、New 3DS でのコア 2 使用 (RSF の
