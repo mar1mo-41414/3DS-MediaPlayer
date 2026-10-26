@@ -155,6 +155,23 @@
   `.gitignore` で `template/*` は `example` 以外コミット対象外。`out/` も対象外)。
 - テスト 222 件 (preset/出力名/解決順の 28 件、テンプレート名解決の 14 件などを追加)。
 
+### GUI (2026-10-26)
+- 実機で、終了時のフェードアウトとホームへの復帰が正しく動くことを確認 (ユーザー確認)。
+- Tkinter (標準ライブラリ) で GUI を作成 (`scripts/mkcia-gui.sh`)。ロジックを Tk 非依存の `gui_model.py` に置き、
+  `gui.py` は画面とイベントだけにした (Tk の無い環境でもモデル層をテストでき、画面はダイアログを差し替えてテストできる)。
+- 外部コマンドを中止できるよう `proc.run` を Popen + ポーリングに変更 (`Cancelled`、`set_cancel_event`)。
+  副作用で見つかった罠: `_probe` / `encode_video` / `check_tools` の `except MkciaError` が `Cancelled` を「読めません」
+  「エンコードに失敗」に言い換えてしまう (中止がエラー扱いになる) → `except Cancelled: raise` を先に置いた (テストで固定)。
+  中止時に子プロセスのパイプを閉じ忘れて ResourceWarning が出ていたのも修正 (`-W error::ResourceWarning` で確認)。
+- 素材の差し替えは「検証してからコピー」: 壊れたファイルでテンプレートを壊さない。`video.mp4` を `video.mkv` に替えたとき
+  古い mp4 が拡張子の優先順で使われ続けないよう、同じ種類の古いファイルを消す。meta.json の保存は未知のキーを保持し、
+  一時ファイル経由で置き換える。
+- Tk の落とし穴: ウィンドウを閉じるときに `after` で予約した定期処理を取り消さないと `invalid command name "...pump"` が
+  出る → `<Destroy>` で取り消す。レイアウトは、ヒントを右の列に置くと入力欄が縮む (列の要求幅が足りなくなる) ので下に置く。
+  `event_generate("<Control-s>")` は非表示ウィンドウには届かないので、テストでは deiconify + focus_force してから送る。
+- テスト 347 件 (GUI の通し操作 55 件を含む)。ミューテーション確認 8 通りで全て検出。画面が無い環境では GUI のテストはスキップ。
+  実機の Linux デスクトップでの手動確認はユーザー側 (この環境では Xvfb 上で確認)。
+
 ## 未解決・今後
 - **実機未確認**。旧3DS での性能 (デコードが間に合うか)、New 3DS でのコア 2 使用 (RSF の
   `AffinityMask`/`CanAccessCore2` が足りているか)、HOME メニューから戻ったときの下画面の再描画。

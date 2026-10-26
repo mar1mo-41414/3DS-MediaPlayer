@@ -7,7 +7,7 @@ from typing import List
 from . import video
 from .errors import MkciaError
 from .pipeline import DEFAULT_ELF, BuildOptions, build_cia
-from .proc import OUT_ROOT, TEMPLATE_ROOT
+from .proc import OUT_ROOT, TEMPLATE_ROOT, Cancelled
 
 EXIT_OK = 0
 EXIT_USER_ERROR = 1  # 入力の不備など、ユーザーが直せるエラー
@@ -76,6 +76,9 @@ def main(argv=None) -> int:
                          keep_work=args.keep_work, compress_code=not args.no_compress),
             log=lambda m: print(m, flush=True),
         )
+    except Cancelled:
+        print("中止しました", file=sys.stderr)
+        return EXIT_INTERRUPTED
     except MkciaError as e:
         print(f"エラー: {e}", file=sys.stderr)
         return EXIT_USER_ERROR

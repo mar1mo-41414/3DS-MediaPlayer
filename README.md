@@ -8,8 +8,8 @@
   音声の再生位置を基準に映像を同期 (遅れたらフレームスキップ、進みすぎたら待機)。
   ループ再生でない動画は、最後まで再生し終えると上下画面を約 1 秒かけて黒くフェードアウトしてホームに戻る。
   テンプレートが変わっても ROM 本体は共通 (romfs 内の決まったファイル名を読むだけ)。
-- **生成ツール** (`tool/`): Python 3 (標準ライブラリのみ) の CLI。処理ごとに関数を分離
-  (`mkcia.video` / `assets` / `banner` / `romfs` / `cia`) してあり、GUI から同じ関数を呼べる。
+- **生成ツール** (`tool/`): Python 3 (標準ライブラリのみ) の CLI と Tkinter の GUI。処理ごとに関数を分離
+  (`mkcia.video` / `assets` / `banner` / `romfs` / `cia`) してあり、GUI (`gui_model` / `gui`) も同じ関数を呼ぶ。
 
 署名は不要 (CFW 前提。`makerom` の既定テスト鍵で CIA 化)。
 
@@ -77,6 +77,23 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia      # パスでも指定できる (-
 | `medium` (既定) | 360x216 (同上) | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
 | `high` (New 3DS 向け) | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
 
+### GUI
+
+```bash
+scripts/mkcia-gui.sh          # Tkinter の GUI (要: python3-tk。Debian/Ubuntu 系は sudo apt install python3-tk)
+```
+
+テンプレートの選択・新規作成、基本情報 (meta.json) の編集、素材 (動画・画像・音声) の差し替えとサムネイル/情報の確認、
+プリセット・ループ・音量・出力名・出力先の設定、検証・ビルド・中止をひとつの画面で行う。CLI と同じ処理を呼ぶ。
+
+- テンプレートは `template/<名前>/` から選ぶ (「フォルダを選ぶ…」で任意のフォルダも開ける)。「新規作成…」で空のテンプレートと
+  既定の meta.json (タイトルIDは名前から自動採番) を作る。
+- 素材の「選択…」は、中身を検証してからテンプレートへコピーする (拡張子違いの古いファイルは消す。壊れたファイルは弾いてテンプレートを変えない)。
+- 入力欄は編集中に検証され、問題は赤字で出る。タイトルIDが他のテンプレートと重なると警告する (両方インストールすると上書きし合うため)。
+- 「CIA を作る」「検証」は先に meta.json を保存する。未保存のままテンプレートを切り替える/閉じるときは確認する。
+- ビルドは別スレッドで動き、進捗バーとログが出る。「中止」で外部コマンドを止められる (途中の一時ファイルも残さない)。
+- 外部コマンドの行はログに出さない (「コマンドも表示」で表示)。
+
 ### 入力の検証とエラー
 
 エンコードなどの重い処理の前に、テンプレート・メディア・出力先・ROM の ELF・外部ツールをまとめて検証し、
@@ -92,12 +109,13 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia      # パスでも指定できる (-
 ### テスト
 
 ```bash
-cd tool && python3 -m unittest discover -s tests     # 約 1 分 / 約 180 件
+cd tool && python3 -m unittest discover -s tests     # 約 2 分 / 347 件 (画面が無い環境では GUI のテストはスキップ)
 ```
 
 外部ツール (ffmpeg / bannertool / 3dstool / makerom) と `prebuilt/mediaplayer.elf` が無い環境では、
 それを使うテストは自動でスキップされる。`test_meta*.py` (meta 検証)、`test_template.py` (テンプレート構成)、
-`test_media.py` (壊れた/違う種類のメディア)、`test_environment.py` (ELF・出力先・ツール)、`test_cli.py` (終了コード)、
+`test_media.py` (壊れた/違う種類のメディア)、`test_environment.py` (ELF・出力先・ツール)、`test_cli.py` (終了コード)、`test_resolution.py` (preset/出力名の優先順位)、`test_cancel.py` (外部コマンドの中止)、
+`test_gui_model.py` (GUI のロジック層)、`test_gui.py` (Tk を実際に動かす GUI 操作テスト。画面 `DISPLAY` が無ければスキップ。Xvfb 上でも動く)、
 `test_e2e.py` (実際に CIA を作る通しテスト: 形式違いの入力、日本語タイトル、失敗時に出力を壊さない、fps・縦横比など)。
 
 ## ROM 本体のビルド

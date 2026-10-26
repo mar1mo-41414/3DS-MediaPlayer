@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
@@ -38,12 +39,40 @@ def find_tool(name: str) -> str:
     )
 
 
+class Cancelled(MkciaError):
+    """GUI などからの中止要求で処理を打ち切ったことを表す。"""
+
+
+# 中止要求。GUI が set() すると、実行中の外部コマンドを終了させ Cancelled を送出する。
+# (同時に走るビルドは 1 つだけという前提のモジュール全体の状態)
+_cancel_event: Optional[threading.Event] = None
+
+
+def set_cancel_event(event: Optional[threading.Event]) -> None:
+    global _cancel_event
+    _cancel_event = event
+
+
+def _terminate(p: subprocess.Popen) -> None:
+    p.terminate()
+    try:
+        p.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        p.wait()
+    for f in (p.stdout, p.stderr):  # パイプを閉じて ResourceWarning やリークを避ける
+        if f:
+            f.close()
+
+
 def run(cmd: Sequence[str], log: Optional[Log] = None, cwd: Optional[Path] = None) -> str:
-    """コマンドを実行して stdout を返す。失敗時は stderr 付きで MkciaError。"""
+    """コマンドを実行して stdout を返す。失敗時は stderr 付きで MkciaError。中止要求があれば Cancelled。"""
     if log:
         log("$ " + " ".join(str(c) for c in cmd))
+    if _cancel_event is not None and _cancel_event.is_set():
+        raise Cancelled("中止しました")
     try:
-        r = subprocess.run(
+        p = subprocess.Popen(
             [str(c) for c in cmd],
             cwd=str(cwd) if cwd else None,
             stdout=subprocess.PIPE,
@@ -53,7 +82,20 @@ def run(cmd: Sequence[str], log: Optional[Log] = None, cwd: Optional[Path] = Non
         )
     except OSError as e:
         raise MkciaError(f"{cmd[0]} を実行できません: {e}") from e
-    if r.returncode != 0:
-        tail = "\n".join((r.stdout + r.stderr).strip().splitlines()[-15:])
-        raise MkciaError(f"{Path(str(cmd[0])).name} が失敗しました (exit {r.returncode}):\n{tail}")
-    return r.stdout
+    try:
+        while True:
+            try:
+                out, err = p.communicate(timeout=0.2)
+                break
+            except subprocess.TimeoutExpired:
+                if _cancel_event is not None and _cancel_event.is_set():
+                    _terminate(p)
+                    raise Cancelled("中止しました") from None
+    except BaseException:  # KeyboardInterrupt を含め、子プロセスを残さない
+        if p.poll() is None:
+            _terminate(p)
+        raise
+    if p.returncode != 0:
+        tail = "\n".join((out + err).strip().splitlines()[-15:])
+        raise MkciaError(f"{Path(str(cmd[0])).name} が失敗しました (exit {p.returncode}):\n{tail}")
+    return out

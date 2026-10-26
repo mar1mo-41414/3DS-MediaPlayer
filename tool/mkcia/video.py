@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from .errors import MkciaError
-from .proc import Log, find_tool, run
+from .proc import Cancelled, Log, find_tool, run
 from .validate import VideoInfo, validate_video
 
 
@@ -93,6 +93,8 @@ def encode_video(
     cmd += ["-movflags", "+faststart", dst]
     try:
         run(cmd, log)
+    except Cancelled:
+        raise
     except MkciaError as e:
         raise MkciaError(f"{Path(src).name} のエンコードに失敗しました:\n{e}") from e
     if not Path(dst).is_file() or Path(dst).stat().st_size == 0:

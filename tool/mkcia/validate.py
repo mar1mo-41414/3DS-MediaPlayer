@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from .errors import MkciaError
-from .proc import find_tool, run
+from .proc import Cancelled, find_tool, run
 
 # ここに挙げた拡張子のファイルを、(stem + 拡張子) の順で探す。ffmpeg が読める形式なら何でもよい
 VIDEO_EXTS = (".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v")
@@ -116,6 +116,8 @@ def _probe(path: Path, label: str, extra: Optional[List[str]] = None) -> dict:
     try:
         out = run([find_tool("ffprobe"), "-v", "error", "-show_format", "-show_streams",
                    "-of", "json", *(extra or []), str(path)])
+    except Cancelled:
+        raise
     except MkciaError as e:
         # ffprobe が走らない (ツール無し) 場合はそのまま、走って失敗したなら「読めない」と言い換える
         if "見つかりません" in str(e) or "実行できません" in str(e):
@@ -185,7 +187,8 @@ def validate_video(path: Path) -> VideoInfo:
     return VideoInfo(w, h, dur, fps, bool(_streams(info, "audio")))
 
 
-def validate_image(path: Path) -> None:
+def validate_image(path: Path) -> tuple:
+    """画像として読めるか確認し、(幅, 高さ) を返す。"""
     label = path.name
     info = _probe(path, label)
     vs = _streams(info, "video")
@@ -196,9 +199,11 @@ def validate_image(path: Path) -> None:
         raise MkciaError(f"{label} の画像サイズを取得できません: {path}")
     if w > MAX_IMAGE_SIDE or h > MAX_IMAGE_SIDE:
         raise MkciaError(f"{label} が大きすぎます ({w}x{h}。一辺 {MAX_IMAGE_SIDE}px 以下にしてください): {path}")
+    return w, h
 
 
-def validate_audio(path: Path) -> None:
+def validate_audio(path: Path) -> Optional[float]:
+    """音声として読めるか確認し、長さ (秒。不明なら None) を返す。"""
     label = path.name
     info = _probe(path, label)
     if not _streams(info, "audio"):
@@ -206,6 +211,7 @@ def validate_audio(path: Path) -> None:
     d = _duration(info)
     if d is not None and d <= 0:
         raise MkciaError(f"{label} の音声の長さが 0 です: {path}")
+    return d
 
 
 # ---------------------------------------------------------------- サイズ見積もり
@@ -303,6 +309,8 @@ def check_tools() -> None:
         )
     try:
         enc = run([find_tool("ffmpeg"), "-hide_banner", "-encoders"])
+    except Cancelled:
+        raise
     except MkciaError:
         return  # 実行時に具体的なエラーになる
     names = {line.split()[1] for line in enc.splitlines() if len(line.split()) >= 2 and line.startswith(" ")}
