@@ -526,9 +526,9 @@ int main(void)
         P.aidx = -1;
     }
 
-    // Y2R: YUV420 -> RGB565 を線形バッファへ出力し、GX 表示転送でタイル化してテクスチャへ入れる
-    // (Y2R の 8x8 ブロック出力を直接テクスチャにする方式は、エミュレータ側で配置が崩れた)
-    u16 *lin = linearAlloc((size_t)vw * vh * 2);
+    // Y2R: YUV420 -> RGB565 を 8x8 ブロック (Z-order = PICA200 のテクスチャ形式) で、
+    // そのままテクスチャメモリへ書く。(GX 表示転送でタイル化する方式は AzaharPlus で
+    // 最初のフレームから更新されなくなったので使わない)
     C3D_Tex tex;
     C3D_TexInit(&tex, TEX_W, TEX_H, GPU_RGB565);
     C3D_TexSetFilter(&tex, GPU_LINEAR, GPU_LINEAR);
@@ -543,7 +543,7 @@ int main(void)
     yp.input_format = INPUT_YUV420_INDIV_8;
     yp.output_format = OUTPUT_RGB_16_565;
     yp.rotation = ROTATION_NONE;
-    yp.block_alignment = BLOCK_LINE;
+    yp.block_alignment = BLOCK_8_BY_8;
     yp.input_line_width = vw;
     yp.input_lines = vh;
     yp.standard_coefficient = COEFFICIENT_ITU_R_BT_601;
@@ -613,22 +613,38 @@ int main(void)
             dbg("t=%.3f show=%d remain=%d st=%d vpush=%d apush=%d", clock, show != NULL, remain, P.dbg_state, P.dbg_vpush, P.dbg_apush);
         dbgn++;
         if (show) {
-            Y2RU_SetSendingY(show->data[0], vw * vh, vw, show->linesize[0] - vw);
-            Y2RU_SetSendingU(show->data[1], vw * vh / 4, vw / 2, show->linesize[1] - vw / 2);
-            Y2RU_SetSendingV(show->data[2], vw * vh / 4, vw / 2, show->linesize[2] - vw / 2);
-            Y2RU_SetReceiving(lin, vw * vh * 2, vw * 2, 0);
+            Result ry = Y2RU_SetSendingY(show->data[0], vw * vh, vw, show->linesize[0] - vw);
+            Result ru = Y2RU_SetSendingU(show->data[1], vw * vh / 4, vw / 2, show->linesize[1] - vw / 2);
+            Result rv = Y2RU_SetSendingV(show->data[2], vw * vh / 4, vw / 2, show->linesize[2] - vw / 2);
+            Result rr = Y2RU_SetReceiving(tex.data, vw * vh * 2, vw * 8 * 2, (TEX_W - vw) * 8 * 2);
             GSPGPU_FlushDataCache(show->data[0], show->linesize[0] * vh);
             GSPGPU_FlushDataCache(show->data[1], show->linesize[1] * vh / 2);
             GSPGPU_FlushDataCache(show->data[2], show->linesize[2] * vh / 2);
-            Y2RU_StartConversion();
-            svcWaitSynchronization(y2r_done, 100 * 1000 * 1000);
-            C3D_SyncDisplayTransfer((u32 *)lin, GX_BUFFER_DIM(vw, vh), (u32 *)tex.data,
-                                    GX_BUFFER_DIM(TEX_W, TEX_H),
-                                    GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(1) |
-                                        GX_TRANSFER_RAW_COPY(0) |
-                                        GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
-                                        GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |
-                                        GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO));
+            Result rs = Y2RU_StartConversion();
+            Result rw = svcWaitSynchronization(y2r_done, 100 * 1000 * 1000);
+#ifdef DEBUG_LOG
+            {
+                static int ldbg;
+                if (ldbg < 60 || (ldbg % 48) == 0) {
+                    u32 sum = 0;
+                    for (int y = 0; y < vh; y += 8)
+                        for (int x = 0; x < vw; x += 8)
+                            sum += show->data[0][y * show->linesize[0] + x];
+                    dbg("frame#%d meanY=%lu pict=%d key=%d", ldbg, sum / ((vw / 8) * (vh / 8)),
+                        show->pict_type, show->key_frame);
+                }
+                ldbg++;
+            }
+            static int ydbg;
+            if (ydbg < 10 || R_FAILED(ry) || R_FAILED(ru) || R_FAILED(rv) || R_FAILED(rr) || R_FAILED(rs) || R_FAILED(rw)) {
+                if (ydbg < 200)
+                    dbg("y2r #%d ls=%d,%d,%d rc=%lx %lx %lx %lx %lx wait=%lx", ydbg, show->linesize[0],
+                        show->linesize[1], show->linesize[2], ry, ru, rv, rr, rs, rw);
+                ydbg++;
+            }
+#else
+            (void)ry; (void)ru; (void)rv; (void)rr; (void)rs; (void)rw;
+#endif
             av_frame_free(&show);
         } else if (!first) {
             // 新しいフレームがなければ描画も省いて vsync を待つだけ
@@ -659,7 +675,6 @@ int main(void)
     Y2RU_StopConversion();
     y2rExit();
     C3D_TexDelete(&tex);
-    linearFree(lin);
 
 out:
     C2D_Fini();
