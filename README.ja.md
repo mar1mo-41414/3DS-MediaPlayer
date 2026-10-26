@@ -14,7 +14,7 @@
 
 - 旧 3DS の実機で、映像・音声・タイトル音・フェードアウトまで確認済み (`medium` まで滑らか)。
 - **New 3DS の実機は未確認** (`high` / `standard` プリセットと、追加コアでのデコードは New 3DS では未検証)。
-- 生成ツールは Linux で開発・テスト (Python 3.12)。
+- 生成ツールは Linux (Python 3.12) で開発し、**Windows** (64bit) でも動く (CLI も GUI も。[Windows](docs/JA/USAGE.md#windows) 参照)。macOS は未確認。
 
 ## 必要なもの
 
@@ -27,6 +27,8 @@
 ROM 本体は `prebuilt/mediaplayer.elf` が入っているので、ビルドし直さない限り Docker や devkitPro は不要。
 
 ## クイックスタート
+
+Windows では `scripts/setup-tools.sh` と `scripts/mkcia.sh` の代わりに `scripts\setup-tools.ps1` と `scripts\mkcia.cmd` を使う (詳細: [docs/JA/USAGE.md](docs/JA/USAGE.md#windows))。
 
 ```bash
 scripts/setup-tools.sh                  # bannertool / 3dstool / makerom を tools/bin/ に用意 (初回のみ)

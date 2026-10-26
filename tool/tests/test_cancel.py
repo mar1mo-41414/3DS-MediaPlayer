@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from helpers import cleanup_assets, make_template, requires_tools
+from helpers import PY, SLEEP, cleanup_assets, make_template, requires_tools
 from mkcia import proc, validate, video
 from mkcia.errors import MkciaError
 from mkcia.pipeline import BuildOptions, build_cia
@@ -27,14 +27,14 @@ class RunCancelTest(unittest.TestCase):
 
     def test_normal_run_unaffected_by_an_unset_event(self):
         set_cancel_event(threading.Event())
-        self.assertEqual(run(["echo", "hello"]).strip(), "hello")
+        self.assertEqual(run(PY + ["print('hello')"]).strip(), "hello")
 
     def test_already_set_event_prevents_starting(self):
         ev = threading.Event()
         ev.set()
         set_cancel_event(ev)
         with self.assertRaises(Cancelled):
-            run(["echo", "never"])
+            run(PY + ["print('never')"])
 
     def test_cancel_during_a_long_command_terminates_it_quickly(self):
         ev = threading.Event()
@@ -42,7 +42,7 @@ class RunCancelTest(unittest.TestCase):
         threading.Timer(0.5, ev.set).start()
         t0 = time.time()
         with self.assertRaises(Cancelled):
-            run(["sleep", "30"])
+            run(SLEEP)
         self.assertLess(time.time() - t0, 5)
 
     def test_stubborn_process_is_killed(self):
@@ -51,17 +51,17 @@ class RunCancelTest(unittest.TestCase):
         threading.Timer(0.3, ev.set).start()
         t0 = time.time()
         with self.assertRaises(Cancelled):
-            run(["bash", "-c", "trap '' TERM; sleep 30"])  # SIGTERM を無視する
+            run(PY + ["import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(30)"])  # SIGTERM を無視する (Windows は強制終了)
         self.assertLess(time.time() - t0, 8)
 
     def test_failure_still_reports_exit_code_and_tail(self):
         with self.assertRaises(MkciaError) as cm:
-            run(["bash", "-c", "echo oops >&2; exit 3"])
+            run(PY + ["import sys; sys.stderr.write('oops\\n'); sys.exit(3)"])
         self.assertIn("exit 3", str(cm.exception))
         self.assertIn("oops", str(cm.exception))
 
     def test_large_output_does_not_deadlock(self):
-        out = run(["bash", "-c", "head -c 3000000 /dev/zero | tr '\\0' 'x'"])
+        out = run(PY + ["import sys; sys.stdout.write('x' * 3000000)"])
         self.assertEqual(len(out), 3000000)
 
     def test_missing_command(self):

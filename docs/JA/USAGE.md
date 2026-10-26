@@ -128,6 +128,33 @@ scripts/mkcia-gui.sh          # Tkinter の GUI (要: python3-tk。Debian/Ubuntu
 - ビルドは別スレッドで動き、進捗バーとログが出る。「中止」で外部コマンドを止められる (一時ファイルも残さない)。
   外部コマンドの行はログに出さない (「コマンドも表示」で表示)。
 
+## Windows
+
+ツールは素の Python なので Windows (64bit) でも動く。python.org から Python 3 を入れ (GUI を使うなら tcl/tk も。既定で含まれる)、
+このリポジトリのクローンで次のようにする。
+
+```bat
+REM 初回のみ: makerom / bannertool / 3dstool / ffmpeg を tools\bin\ に取得
+powershell -ExecutionPolicy Bypass -File scripts\setup-tools.ps1
+
+REM サンプルをビルド -> out\Example.cia
+scripts\mkcia.cmd example
+
+REM 自分のテンプレートと GUI
+scripts\mkcia.cmd --new MyMovie
+scripts\mkcia.cmd MyMovie
+scripts\mkcia-gui.cmd
+```
+
+
+- `scripts\mkcia.cmd` / `scripts\mkcia-gui.cmd` は `mkcia.sh` / `mkcia-gui.sh` の Windows 版 (引数は同じ)。`py` ランチャーがあればそれを、無ければ
+  `python` を使う (Microsoft Store を開く "python" のスタブは使えない。Python を入れるか `py` を使うこと)。
+- `setup-tools.ps1` は動作確認した版の配布バイナリを取得する (`ffmpeg` は `PATH` 上にあれば取得しない。
+  [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) の essentials ビルドは libx264 と aac を含む)。手元のツールを使うなら、`PATH` に置くか
+  `MKCIA_TOOLS_DIR` で場所を指定する。
+- 日本語や空白を含むパスでも動く。出力ファイルの権限はフォルダから継承した普通のものになる。
+- Windows では使えないもの: ROM 自体のビルド用シェルスクリプト (`build-rom.sh` など。Docker/devkitPro が要るので、ROM を開発するときだけ必要)。
+
 ## 操作 (3DS 側)
 
 - **START**: 再生中いつでも終了してホームメニューに戻る。

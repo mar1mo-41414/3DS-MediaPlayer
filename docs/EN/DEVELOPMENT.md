@@ -59,8 +59,11 @@ when those are missing. The GUI tests need a display (`DISPLAY`) and are skipped
 | `test_gui_model.py` / `test_gui.py` | GUI logic / driving the real Tk window |
 | `test_default_sound.py` | The default sound when select_sound is missing (shipped file, silent override, broken file is an error) |
 | `test_extract.py` | Making icon/bottom from the video when missing (embedded image, frame, precedence, range check) |
+| `test_fsutil.py` | Temporary files/directories made with normal permissions (not mkstemp's owner-only ones) |
 | `test_scaffold.py` | Template scaffolding (`--new`): copying, avoiding title-ID collisions, leaving nothing behind on failure, builds right away |
 | `test_e2e.py` | Builds real CIAs (odd input formats, Japanese titles, leaving the output intact on failure, fps, aspect ratio) |
+
+Tests that need POSIX permission bits, umask or symlinks are skipped on Windows (and where symlinks cannot be created).
 
 The end-to-end tests are slow because makerom compresses the ELF code (about 8 s each); the tests skip it with `compress_code=False`.
 
@@ -71,6 +74,8 @@ The end-to-end tests are slow because makerom compresses the ELF code (about 8 s
 - `unit`: runs the tests without any external tools on Python 3.9 / 3.12 / 3.13 (this guarantees that the tool-dependent tests are skipped, not failed).
 - `full`: on Ubuntu, sets up all the tools (`scripts/setup-tools.sh`) and a virtual display (xvfb), runs every test, and builds a CIA from
   `template/example`. The resulting `Example.cia` is kept as an artifact.
+- `windows`: on a Windows runner, fetches the tools with `scripts/setup-tools.ps1`, runs every test (including the GUI tests), and builds
+  the sample with `scripts\mkcia.cmd`.
 - `release`: when a `v*` tag is pushed, attaches `Example.cia` to the Release (creating it if needed).
 
 ```bash

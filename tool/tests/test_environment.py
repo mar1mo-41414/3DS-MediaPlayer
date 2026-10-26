@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from helpers import base_assets, cleanup_assets, make_template, requires_tools
+from helpers import NO_PERM_CHECK, base_assets, cleanup_assets, make_template, requires_tools, skip_no_symlink, skip_on_windows
 from mkcia import validate
 from mkcia.errors import MkciaError
 from mkcia.pipeline import DEFAULT_ELF
@@ -83,7 +83,7 @@ class ElfCheckTest(unittest.TestCase):
     def test_prebuilt_elf_passes(self):
         check_elf(DEFAULT_ELF)
 
-    @unittest.skipIf(os.geteuid() == 0, "root は読み取り権限を無視する")
+    @unittest.skipIf(NO_PERM_CHECK, "権限ビットが効かない環境 (root / Windows)")
     def test_unreadable(self):
         p = self.write("x.elf", elf_header())
         os.chmod(p, 0)
@@ -126,6 +126,7 @@ class OutputCheckTest(unittest.TestCase):
         d.mkdir()
         self.assertIn("ディレクトリ", self.msg(d))
 
+    @skip_no_symlink
     def test_same_as_input(self):
         link = self.d / "alias.cia"
         link.symlink_to(self.inp)
@@ -134,7 +135,7 @@ class OutputCheckTest(unittest.TestCase):
     def test_parent_is_a_file(self):
         self.assertIn("ディレクトリではありません", self.msg(self.inp / "out.cia"))
 
-    @unittest.skipIf(os.geteuid() == 0, "root は書き込み権限を無視する")
+    @unittest.skipIf(NO_PERM_CHECK, "権限ビットが効かない環境 (root / Windows)")
     def test_unwritable_parent(self):
         ro = self.d / "ro"
         ro.mkdir()
@@ -182,6 +183,7 @@ class ToolsCheckTest(unittest.TestCase):
         self.assertNotIn("ffmpeg,", m)
 
     @requires_tools
+    @skip_on_windows  # シェルスクリプトの偽 ffmpeg を使う
     def test_ffmpeg_without_libx264(self):
         with tempfile.TemporaryDirectory() as d:
             fake = Path(d) / "ffmpeg"
@@ -193,6 +195,7 @@ class ToolsCheckTest(unittest.TestCase):
         self.assertIn("libx264", str(cm.exception))
 
     @requires_tools
+    @skip_on_windows  # シェルスクリプトの偽 ffmpeg を使う
     def test_ffmpeg_without_aac(self):
         with tempfile.TemporaryDirectory() as d:
             fake = Path(d) / "ffmpeg"
@@ -213,6 +216,7 @@ class ToolsCheckTest(unittest.TestCase):
                 self.assertEqual(validate.find_tool("ffprobe"), str(fake))
 
     @requires_tools
+    @skip_on_windows  # Windows には実行権限ビットが無い
     def test_non_executable_in_tools_dir_is_skipped(self):
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "ffprobe").write_text("not executable")

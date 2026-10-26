@@ -14,7 +14,7 @@ For 3DS consoles with custom firmware (CFW); install the result with FBI or simi
 
 - Verified on a real **Old 3DS**: video, audio, the title sound, and the fade-out all work (smooth up to the `medium` preset).
 - **Not verified on a New 3DS** (the `high` / `standard` presets and the extra-core decoding path are untested there).
-- The build tool is developed and tested on Linux (Python 3.12).
+- The build tool is developed on Linux (Python 3.12) and also runs on **Windows** (64-bit; CLI and GUI, see [Windows](docs/EN/USAGE.md#windows)). macOS is untested.
 
 ## Requirements
 
@@ -28,6 +28,8 @@ For 3DS consoles with custom firmware (CFW); install the result with FBI or simi
 The ROM is shipped prebuilt as `prebuilt/mediaplayer.elf`, so Docker/devkitPro are not needed unless you rebuild it.
 
 ## Quick start
+
+On Windows, use `scripts\setup-tools.ps1` and `scripts\mkcia.cmd` in place of `scripts/setup-tools.sh` and `scripts/mkcia.sh` (details: [docs/EN/USAGE.md](docs/EN/USAGE.md#windows)).
 
 ```bash
 scripts/setup-tools.sh                  # build bannertool / 3dstool / makerom into tools/bin/ (once)

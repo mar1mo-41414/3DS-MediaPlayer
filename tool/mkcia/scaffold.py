@@ -7,11 +7,11 @@
 import json
 import os
 import shutil
-import tempfile
 from pathlib import Path
 from typing import Optional
 
 from .errors import MkciaError
+from .fsutil import create_tmp_dir
 from .gui_model import _all_forms, check_template_name, suggest_title_id
 from .meta import parse_meta
 
@@ -33,7 +33,7 @@ def create_from_example(name: str, root: Path, example: str = EXAMPLE_NAME) -> P
     dest = root / n
 
     taken = [form.title_id for _, form in _all_forms(root)]
-    tmp = Path(tempfile.mkdtemp(prefix=f".{n}-", suffix=".tmp", dir=root))
+    tmp = create_tmp_dir(root, prefix=f".{n}-", suffix=".tmp")
     try:
         work = tmp / "new"
         # リンクは中身をコピーする (雛形の外を指さない)。タイトル選択音 (select_sound.*) は引き継がず、既定の音を使わせる

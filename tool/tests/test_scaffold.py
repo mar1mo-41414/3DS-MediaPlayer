@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from helpers import cleanup_assets, make_template, requires_tools
+from helpers import cleanup_assets, make_template, requires_tools, skip_no_symlink
 from mkcia import cli, scaffold
 from mkcia.errors import MkciaError
 from mkcia.meta import load_meta
@@ -139,6 +139,7 @@ class CreateFromExampleTest(unittest.TestCase):
                 scaffold.create_from_example("x", self.root)
         self.assertEqual([p.name for p in self.root.iterdir()], ["example"])  # 一時ディレクトリも残さない
 
+    @skip_no_symlink
     def test_symlinks_in_the_example_are_copied_as_content(self):
         real = self.root.parent / "outside.png"
         real.write_bytes(b"outside")

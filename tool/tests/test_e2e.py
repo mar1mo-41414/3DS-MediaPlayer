@@ -21,6 +21,8 @@ from helpers import (
     make_video,
     read_cia_info,
     requires_tools,
+    skip_no_symlink,
+    skip_on_windows,
 )
 from mkcia import pipeline, video
 from mkcia.errors import MkciaError
@@ -76,6 +78,7 @@ class SuccessTest(E2EBase):
         self.assertValidCia(packed)
         self.assertLess(packed.stat().st_size, plain.stat().st_size)
 
+    @skip_on_windows
     def test_output_permissions_follow_umask(self):
         old = os.umask(0o022)
         try:
@@ -147,6 +150,7 @@ class SuccessTest(E2EBase):
             os.chdir(cwd)
         self.assertTrue((self.d / "rel" / "out.cia").is_file())
 
+    @skip_no_symlink
     def test_symlinked_inputs(self):
         t = make_template(self.d / "t", skip=("video.mp4", "icon.png"))
         (t / "video.mp4").symlink_to(base_assets() / "video.mp4")
@@ -278,6 +282,7 @@ class FailureTest(E2EBase):
         (self.d / "afile").write_text("x")
         self.fails(t, "ディレクトリではありません", out=self.d / "afile" / "out.cia")
 
+    @skip_no_symlink
     def test_output_cannot_be_an_input(self):
         t = make_template(self.d / "t")
         link = self.d / "link.cia"

@@ -1,6 +1,7 @@
 """テスト共通: ffmpeg で小さなテスト用メディアを作る / テンプレートを組み立てる / CIA の中身を読む。"""
 
 import json
+import os
 import shutil
 import struct
 import subprocess
@@ -14,6 +15,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from mkcia.errors import MkciaError  # noqa: E402
 from mkcia.pipeline import DEFAULT_ELF  # noqa: E402
 from mkcia.proc import find_tool  # noqa: E402
+
+# Windows では POSIX の権限ビット・umask・シンボリックリンク作成 (要権限) が使えない
+IS_WINDOWS = os.name == "nt"
+# 子プロセスに使う Python 自身 (bash / sleep / echo に頼らない)
+PY = [sys.executable, "-c"]
+SLEEP = PY + ["import time; time.sleep(30)"]
+# 権限ビットで「読めない/書けない」を作るテストは Windows と root では成り立たない
+NO_PERM_CHECK = IS_WINDOWS or os.geteuid() == 0
+
+
+def _can_symlink() -> bool:
+    d = tempfile.mkdtemp(prefix="mkcia-symlink-probe-")
+    try:
+        (Path(d) / "t").write_text("x")
+        (Path(d) / "l").symlink_to(Path(d) / "t")
+        return True
+    except (OSError, NotImplementedError):
+        return False
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+CAN_SYMLINK = _can_symlink()
+skip_no_symlink = unittest.skipUnless(CAN_SYMLINK, "この環境ではシンボリックリンクを作れない")
+skip_on_windows = unittest.skipIf(IS_WINDOWS, "POSIX の権限ビット / umask の挙動を確かめるテスト")
 
 GOOD_META = {
     "title": "TestApp",

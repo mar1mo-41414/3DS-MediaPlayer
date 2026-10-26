@@ -419,11 +419,11 @@ class FormFrameAtTest(unittest.TestCase):
             form.publisher = "p"
             form.frame_at = "12.5"
             t.save_form(form)
-            self.assertEqual(json.loads((t.path / "meta.json").read_text())["frame_at"], 12.5)
+            self.assertEqual(json.loads((t.path / "meta.json").read_text(encoding="utf-8"))["frame_at"], 12.5)
             self.assertEqual(t.load_form()[0].frame_at, "12.5")
             form.frame_at = " "
             t.save_form(form)
-            self.assertNotIn("frame_at", json.loads((t.path / "meta.json").read_text()))
+            self.assertNotIn("frame_at", json.loads((t.path / "meta.json").read_text(encoding="utf-8")))
 
     def test_integers_are_shown_without_a_decimal_point(self):
         self.assertEqual(g._fmt_seconds(5), "5")

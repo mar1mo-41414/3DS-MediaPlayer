@@ -12,7 +12,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import threading
 import traceback
 from dataclasses import dataclass
@@ -21,6 +20,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import video
 from .errors import MkciaError
+from .fsutil import create_tmp_file
 from .meta import parse_meta
 from .pipeline import BuildOptions, Resolved, build_cia, validate_inputs
 from .proc import TEMPLATE_ROOT, Cancelled, find_tool, set_cancel_event
@@ -253,19 +253,17 @@ class TemplateDir:
                 raw.pop(k, None)
         raw.update(new)
         text = json.dumps(raw, ensure_ascii=False, indent=2) + "\n"
-        fd, tmp = tempfile.mkstemp(prefix=".meta-", suffix=".tmp", dir=self.path)
+        tmp = None
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(text)
-            umask = os.umask(0)
-            os.umask(umask)
-            os.chmod(tmp, 0o666 & ~umask)
+            tmp = create_tmp_file(self.path, prefix=".meta-", suffix=".tmp")
+            tmp.write_text(text, encoding="utf-8")
             os.replace(tmp, self.path / "meta.json")
         except OSError as e:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
+            if tmp is not None:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
             raise MkciaError(f"meta.json を保存できません: {e.strerror}") from e
 
     # ---- 素材
@@ -299,18 +297,19 @@ class TemplateDir:
         except OSError:
             pass
         describe_file(spec.kind, src)  # 読めないファイルはコピー前に弾く (テンプレートを壊さない)
-        fd, tmp = tempfile.mkstemp(prefix=f".{stem}-", suffix=".tmp", dir=self.path)
-        os.close(fd)
+        tmp = None
         try:
+            tmp = create_tmp_file(self.path, prefix=f".{stem}-", suffix=".tmp")
             shutil.copyfile(src, tmp)
             for old in self.asset_candidates(stem):  # 拡張子違いの古い素材が優先されないよう消す
                 old.unlink()
             os.replace(tmp, dest)
         except OSError as e:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
+            if tmp is not None:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
             raise MkciaError(f"{src.name} をコピーできません: {e.strerror}") from e
         return dest
 

@@ -252,6 +252,27 @@
   独自の音声を外したので、Release の `Example.cia` も既定の音になる。
 - GUI は未設定のとき「既定のタイトル選択音を使う」と表示。
 
+### Windows 対応の確認 (2026-10-26)
+- 要望: Windows でも動くか。Windows 11 の VM (OpenSSH 接続) で、ツール一式を **ユーザー領域の一時フォルダに展開するだけ**
+  (インストールなし: NuGet の Python、gyan.dev の ffmpeg essentials、makerom 0.19.0 / bannertool 1.2.2 / 3dstool 1.2.6 の配布 exe) で検証した。
+- 結論: **CLI も GUI も動く**。同じ example から作った CIA は、ExHeader と ExeFS が Linux の CI 産とバイト一致 (差は RomFS = ffmpeg の版違いによる動画だけ)。
+  実機の起動可否を左右する権限まわりが同一であることの確認になる。実機 (3DS) での再生確認は Linux 産のみ。
+- 見つかった問題と対処:
+  - `find_tool` が `ffmpeg` → `ffmpeg.exe` を補わず、全ツールが「見つからない」扱いだった → PATHEXT で拡張子を補う。
+  - **`tempfile.mkstemp` / `mkdtemp` が作る一時物は、Python 3.12 以降の Windows では ACL まで所有者専用になり、`os.replace` / `rename` で
+    本来の名前にしても残る**。ssh 経由 (昇格トークン) で `--new` したテンプレートを、デスクトップ側 (非昇格トークン) の GUI が
+    `PermissionError` で開けず、起動直後に落ちた。→ 最終的な成果物になるもの (CIA、`meta.json`、素材、`--new` のテンプレート)
+    は `fsutil.create_tmp_file` / `create_tmp_dir` (排他的に作るだけ。umask / 親の継承に従う) で作る。Linux でも素材のコピーが 0600 だった点が直った。
+  - テストが POSIX 前提 (`bash` / `sleep` / `echo` を子プロセスに使う、`os.geteuid`、権限ビットと umask、シンボリックリンク作成) だった →
+    子プロセスは Python 自身にし、Windows / root では権限系を、リンクを作れない環境ではリンク系をスキップ。`read_text()` の既定エンコーディング
+    (cp932) 依存もテスト側にあった。
+  - ssh 越しの (デスクトップに繋がっていない) セッションでは Tk にフォーカスが渡らず、`<Control-s>` のテストだけ落ちる。
+    その場合はスキップにした。デスクトップ側 (スケジュールタスクで対話セッションへ起動) では GUI テスト 56 件が全て通る。
+- 追加: `scripts/setup-tools.ps1` (配布 exe を `tools\bin` に取得)、`scripts/mkcia.cmd` / `mkcia-gui.cmd` (ラッパー)、`.gitattributes`
+  (`.cmd` / `.ps1` は CRLF)、CI の `windows` ジョブ。`.ps1` は PowerShell 5.1 が BOM 無し UTF-8 を ANSI として読むので BOM 付きにした。
+- 画面のスクリーンショットは、VM のデスクトップセッションが切断状態で `CopyFromScreen` が失敗したため撮れていない (GUI の起動と生存、
+  GUI テスト 56 件の成功までは確認)。macOS は未確認。
+
 ## 未解決・今後
 - 旧3DS: `light` / `medium` は映像・音声とも滑らか、タイトル音・終了時のフェードアウトも確認済み。
   `high` は再生できるが、デコードが再生速度ぎりぎりで音声が少し間延びする。デコードが遅れたときに

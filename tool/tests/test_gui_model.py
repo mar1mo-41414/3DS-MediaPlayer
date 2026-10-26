@@ -10,7 +10,19 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from helpers import GOOD_META, base_assets, cleanup_assets, make_audio, make_image, make_template, make_video, requires_tools
+from helpers import (
+    GOOD_META,
+    SLEEP,
+    base_assets,
+    cleanup_assets,
+    make_audio,
+    make_image,
+    make_template,
+    make_video,
+    requires_tools,
+    skip_no_symlink,
+    skip_on_windows,
+)
 from mkcia import gui_model as g
 from mkcia import video
 from mkcia.errors import MkciaError
@@ -229,6 +241,7 @@ class TemplateDirTest(unittest.TestCase):
         self.assertNotIn("preset", after)
         self.assertNotIn("output", after)
 
+    @skip_on_windows
     def test_save_form_leaves_no_temp_files_and_normal_permissions(self):
         t = g.TemplateDir.create("perm", self.root)
         old = os.umask(0o022)
@@ -312,6 +325,7 @@ class AssetTest(unittest.TestCase):
         self.assertEqual(self.t.set_asset("icon", dest), dest)
         self.assertEqual(dest.stat().st_mtime_ns, mtime)
 
+    @skip_no_symlink
     def test_symlink_source_is_copied_as_a_real_file(self):
         link = self.src / "link.png"
         link.symlink_to(make_image(self.src / "real.png"))
@@ -470,7 +484,7 @@ class JobTest(unittest.TestCase):
     def test_cancel_interrupts_a_running_command(self):
         from mkcia.proc import run
 
-        job = g.Job(lambda log: run(["sleep", "30"])).start()
+        job = g.Job(lambda log: run(SLEEP)).start()
         time.sleep(0.4)
         job.cancel()
         t0 = time.time()

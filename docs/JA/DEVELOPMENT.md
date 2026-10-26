@@ -59,8 +59,11 @@ GUI のテストは画面 (`DISPLAY`) が必要で、無ければスキップさ
 | `test_gui_model.py` / `test_gui.py` | GUI のロジック層 / Tk を実際に動かす操作テスト |
 | `test_default_sound.py` | select_sound が無いときの既定の音 (同梱ファイル・無音の指定・壊れた指定はエラー) |
 | `test_extract.py` | icon/bottom が無いときの動画からの画像生成 (埋め込み画像・フレーム・優先順位・範囲チェック) |
+| `test_fsutil.py` | 一時ファイル/ディレクトリを (mkstemp の所有者専用ではなく) 通常の権限で作ること |
 | `test_scaffold.py` | 雛形生成 (`--new`): コピー・タイトルID の重複回避・失敗時に何も残さない・そのままビルドできる |
 | `test_e2e.py` | 実際に CIA を作る通しテスト (形式違いの入力、日本語タイトル、失敗時に出力を壊さない、fps・縦横比) |
+
+POSIX の権限ビット・umask・シンボリックリンクが要るテストは、Windows (とリンクを作れない環境) ではスキップする。
 
 通しテストが遅いのは makerom の ELF コード圧縮 (1 回約 8 秒) のため。テストでは `compress_code=False` で省く。
 
@@ -71,6 +74,7 @@ GUI のテストは画面 (`DISPLAY`) が必要で、無ければスキップさ
 - `unit`: 外部ツール無し・Python 3.9 / 3.12 / 3.13 でテストを回す (ツールが無い環境でテストがスキップされ、落ちないことの保証)。
 - `full`: Ubuntu でツール一式 (`scripts/setup-tools.sh`) と仮想ディスプレイ (xvfb) をそろえ、全テストと、`template/example` からの CIA の生成まで行う。
   生成した `Example.cia` は成果物 (artifact) として残る。
+- `windows`: Windows のランナーで `scripts/setup-tools.ps1` でツールを取得し、全テスト (GUI テスト含む) と、`scripts\mkcia.cmd` でのサンプルの生成まで行う。
 - `release`: `v*` のタグを push したとき、`Example.cia` を Release に添付する (Release が無ければ作る)。
 
 ```bash

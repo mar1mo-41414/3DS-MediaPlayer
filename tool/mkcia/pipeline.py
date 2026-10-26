@@ -11,6 +11,7 @@ import math
 
 from . import assets, banner, cia, extract, romfs, video
 from .errors import MkciaError
+from .fsutil import create_tmp_file
 from .meta import load_meta
 from .proc import OUT_ROOT, REPO_ROOT, Log
 from .validate import (
@@ -168,16 +169,13 @@ def build_cia(opt: BuildOptions, log: Optional[Log] = None) -> Path:
             out.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             raise MkciaError(f"出力先ディレクトリを作れません: {out.parent} ({e.strerror})") from e
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{out.stem}-", suffix=".cia.tmp", dir=out.parent)
-        os.close(fd)
-        tmp_out = Path(tmp_name)
+        try:
+            tmp_out = create_tmp_file(out.parent, prefix=f".{out.stem}-", suffix=".cia.tmp")
+        except OSError as e:
+            raise MkciaError(f"出力先に一時ファイルを作れません: {out.parent} ({e.strerror})") from e
         cia.build_cia(Path(opt.elf), rsf, romfs_bin, smdh, bnr, meta, tmp_out, log)
         if not tmp_out.is_file() or tmp_out.stat().st_size == 0:
             raise MkciaError("CIA の生成結果が空です")
-        # mkstemp は 0600 で作るので、通常のファイル作成と同じ権限 (umask に従う) にしてから置き換える
-        umask = os.umask(0)
-        os.umask(umask)
-        os.chmod(tmp_out, 0o666 & ~umask)
         os.replace(tmp_out, out)
         tmp_out = None
         log(f"完了: {out} ({out.stat().st_size / 1024 / 1024:.1f} MiB)")

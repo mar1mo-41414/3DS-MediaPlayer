@@ -251,10 +251,10 @@ class SaveTest(GuiTestBase):
         self.new_template("S")
         self.good_fields()
         self.app.save()
-        before = (self.app.template.path / "meta.json").read_text()
+        before = (self.app.template.path / "meta.json").read_text(encoding="utf-8")
         self.fill(title="x" * 65)
         self.assertFalse(self.app.save())
-        self.assertEqual((self.app.template.path / "meta.json").read_text(), before)
+        self.assertEqual((self.app.template.path / "meta.json").read_text(encoding="utf-8"), before)
         self.assertTrue(any("title" in e for e in self.app.errors))
         self.assertIn("保存できません", self.app.status_var.get())
 
@@ -273,6 +273,8 @@ class SaveTest(GuiTestBase):
         self.root.update()
         self.root.focus_force()
         self.root.update()
+        if self.root.focus_get() is None:  # デスクトップに繋がっていないセッション (ssh 越しの Windows 等) ではキーが届かない
+            self.skipTest("ウィンドウにフォーカスを渡せない環境")
         self.root.event_generate("<Control-s>")
         self.root.update()
         self.assertEqual(self.meta()["title"], "ViaShortcut")
@@ -312,16 +314,16 @@ class DirtyStateTest(GuiTestBase):
         self.app.answers["confirm"] = True
         self.switch_to("two")
         self.assertEqual(self.app.template.name, "two")
-        self.assertEqual(json.loads((self.troot / "one" / "meta.json").read_text())["title"], "saved-title")
+        self.assertEqual(json.loads((self.troot / "one" / "meta.json").read_text(encoding="utf-8"))["title"], "saved-title")
 
     def test_edit_then_switch_no_discards(self):
         self.two()
-        old = json.loads((self.troot / "one" / "meta.json").read_text())["title"]
+        old = json.loads((self.troot / "one" / "meta.json").read_text(encoding="utf-8"))["title"]
         self.fill(title="thrown-away")
         self.app.answers["confirm"] = False
         self.switch_to("two")
         self.assertEqual(self.app.template.name, "two")
-        self.assertEqual(json.loads((self.troot / "one" / "meta.json").read_text())["title"], old)
+        self.assertEqual(json.loads((self.troot / "one" / "meta.json").read_text(encoding="utf-8"))["title"], old)
 
     def test_yes_with_invalid_input_stays_put(self):
         self.two()

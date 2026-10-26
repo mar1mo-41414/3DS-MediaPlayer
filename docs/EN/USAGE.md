@@ -134,6 +134,34 @@ scripts/mkcia-gui.sh          # Tkinter GUI (needs python3-tk; on Debian/Ubuntu:
 - The build runs in a worker thread with a progress bar and a log. "Cancel" stops the external commands (and leaves no
   temporary files). Command lines are hidden from the log unless "show commands" is ticked.
 
+## Windows
+
+The tool is plain Python, so it runs on Windows (64-bit) as well. Install Python 3 from python.org (tick "tcl/tk" if you want the GUI;
+the installer includes it by default), then, from a clone of this repository:
+
+```bat
+REM once: download makerom, bannertool, 3dstool and ffmpeg into tools\bin\
+powershell -ExecutionPolicy Bypass -File scripts\setup-tools.ps1
+
+REM build the sample -> out\Example.cia
+scripts\mkcia.cmd example
+
+REM your own template, and the GUI
+scripts\mkcia.cmd --new MyMovie
+scripts\mkcia.cmd MyMovie
+scripts\mkcia-gui.cmd
+```
+
+
+- `scripts\mkcia.cmd` / `scripts\mkcia-gui.cmd` are the Windows counterparts of `mkcia.sh` / `mkcia-gui.sh` (same arguments). They use the
+  `py` launcher if there is one, otherwise `python` (the "python" stub that opens the Microsoft Store does not work; install Python or use `py`).
+- `setup-tools.ps1` fetches released binaries of known-good versions (`ffmpeg` is skipped if it is already on `PATH`; the essentials build of
+  [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) includes libx264 and aac). To use tools you already have, put them on `PATH` or in
+  a directory named by `MKCIA_TOOLS_DIR`.
+- Paths with Japanese or spaces work. Output files get normal permissions inherited from the folder.
+- Not available on Windows: the shell scripts for building the ROM (`build-rom.sh` and friends, which need Docker/devkitPro and are only
+  for developing the ROM itself).
+
 ## Controls (on the 3DS)
 
 - **START**: quit at any time and return to the HOME Menu.

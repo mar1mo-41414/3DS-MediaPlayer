@@ -26,10 +26,13 @@ def _search_dirs():
 
 def find_tool(name: str) -> str:
     """MKCIA_TOOLS_DIR -> <repo>/tools/bin -> PATH の順で外部ツールを探す。"""
+    # Windows では ffmpeg -> ffmpeg.exe のように拡張子を補って探す (shutil.which と同じ PATHEXT)
+    exts = [""] + [e for e in os.environ.get("PATHEXT", ".EXE").lower().split(os.pathsep) if e] if os.name == "nt" else [""]
     for d in _search_dirs():
-        p = d / name
-        if p.is_file() and os.access(p, os.X_OK):
-            return str(p)
+        for ext in exts:
+            p = d / (name + ext)
+            if p.is_file() and os.access(p, os.X_OK):
+                return str(p)
     found = shutil.which(name)
     if found:
         return found

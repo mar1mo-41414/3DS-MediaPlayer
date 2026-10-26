@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import base_assets, cleanup_assets, make_template, requires_tools
+from helpers import NO_PERM_CHECK, base_assets, cleanup_assets, make_template, requires_tools, skip_no_symlink
 from mkcia.errors import MkciaError
 from mkcia.validate import check_template
 
@@ -95,17 +95,19 @@ class TemplateStructureTest(unittest.TestCase):
                 self.assertIn("空", m)
                 self.assertIn(name, m)
 
+    @skip_no_symlink
     def test_broken_symlink(self):
         d = make_template(self.root / "t", skip=("video.mp4",))
         (d / "video.mp4").symlink_to(self.root / "does-not-exist")
         self.assertIn("開けません", self.msg(d))
 
+    @skip_no_symlink
     def test_symlinked_inputs_are_accepted(self):
         d = make_template(self.root / "t", skip=("video.mp4",))
         (d / "video.mp4").symlink_to(base_assets() / "video.mp4")
         self.assertEqual(check_template(d).video.name, "video.mp4")
 
-    @unittest.skipIf(os.geteuid() == 0, "root は読み取り権限を無視する")
+    @unittest.skipIf(NO_PERM_CHECK, "権限ビットが効かない環境 (root / Windows)")
     def test_unreadable_file(self):
         d = make_template(self.root / "t")
         os.chmod(d / "icon.png", 0)
