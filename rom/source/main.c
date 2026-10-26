@@ -563,8 +563,23 @@ int main(void)
     if (n3ds)
         core = 2;
     else
-        APT_SetAppCpuTimeLimit(80); // 旧3DSはシステムコア(1)を最大80%まで使う
-    Thread th = threadCreate(decode_thread, NULL, 256 * 1024, prio - 1, core, false);
+        // 旧3DSはシステムコア(1)の一部を借りる。システムモジュール(FS/SD など)が動くコアなので、
+        // 取りすぎると「SD card was removed」になり得る。標準的な 30% に留める。
+        APT_SetAppCpuTimeLimit(30);
+    // デコードは本体 (メイン) より低い優先度で動かし、描画・入力を妨げない
+    Thread th = threadCreate(decode_thread, NULL, 256 * 1024, prio + 1, core, false);
+    dbg("n3ds=%d core=%d thread=%p prio=%ld", (int)n3ds, core, (void *)th, (long)prio);
+    if (!th) {
+        consoleInit(GFX_BOTTOM, NULL);
+        printf("Cannot start decoder thread\n(Press START to exit)\n");
+        while (aptMainLoop()) {
+            hidScanInput();
+            if (hidKeysDown() & KEY_START)
+                break;
+            gspWaitForVBlank();
+        }
+        goto out;
+    }
 
     dbg("thread started core=%d", core);
     // 先読み: キューが埋まる (または EOF) まで待ってから音声を開始する

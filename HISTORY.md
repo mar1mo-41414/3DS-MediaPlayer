@@ -75,6 +75,13 @@
   古いインスタンスに繋がって誤診の原因になった。ログ (`azahar_log.txt` の
   `HW.Memory <Error>`) とアプリ内 SD ログ (`-DDEBUG_LOG`) の方が確実だった。
 
+### 実機での最初の確認 (2026-10-26)
+- Twinkle Night / テスト CIA の両方で、起動後に ErrDisp「The SD card was removed.」が出た (実機は CFW 環境)。
+  `dspfirm.cdc` は `sdmc:/3ds/dspfirm.cdc` で正しい (無くても映像のみ再生する作りなので無関係)。
+- 疑い: 旧3DS で `APT_SetAppCpuTimeLimit(80)` としてシステムコア (FS/SD ドライバが動く) を取りすぎた。
+  → 30 に下げ、デコードスレッドの優先度をメインより低くした。原因確定は実機ログ待ち
+  (`-DDEBUG_LOG` ビルドの CIA で `sdmc:/mediaplayer.log` を確認)。
+
 ## 未解決・今後
 - **実機未確認**。旧3DS での性能 (デコードが間に合うか)、New 3DS でのコア 2 使用 (RSF の
   `AffinityMask`/`CanAccessCore2` が足りているか)、HOME メニューから戻ったときの下画面の再描画。
