@@ -156,16 +156,25 @@ class App:
         ttk.Entry(play, textvariable=self.vars["output"]).grid(row=3, column=1, sticky="ew", pady=2)
         ttk.Label(play, text="空欄 = テンプレート名。.cia は自動で付く", style="Hint.TLabel").grid(row=3, column=2, sticky="w", padx=PAD)
 
-        ttk.Label(play, text="出力先フォルダ").grid(row=4, column=0, sticky="e", padx=(0, PAD), pady=2)
+        ttk.Label(play, text="画像の抽出位置").grid(row=4, column=0, sticky="e", padx=(0, PAD), pady=2)
+        frbar = ttk.Frame(play)
+        frbar.grid(row=4, column=1, sticky="ew", pady=2)
+        self.vars["frame_at"] = tk.StringVar()
+        self.vars["frame_at"].trace_add("write", lambda *a: self.on_field_changed())
+        ttk.Entry(frbar, textvariable=self.vars["frame_at"], width=10).pack(side="left")
+        ttk.Label(frbar, text="秒 (空欄 = 埋め込み画像、無ければ長さの15%。アイコン/下画面が無いときだけ)",
+                  style="Hint.TLabel").pack(side="left", padx=PAD)
+
+        ttk.Label(play, text="出力先フォルダ").grid(row=5, column=0, sticky="e", padx=(0, PAD), pady=2)
         self.outdir_var = tk.StringVar()
-        ttk.Entry(play, textvariable=self.outdir_var).grid(row=4, column=1, sticky="ew", pady=2)
-        ttk.Button(play, text="参照…", command=self.on_choose_outdir).grid(row=4, column=2, sticky="w", padx=PAD)
+        ttk.Entry(play, textvariable=self.outdir_var).grid(row=5, column=1, sticky="ew", pady=2)
+        ttk.Button(play, text="参照…", command=self.on_choose_outdir).grid(row=5, column=2, sticky="w", padx=PAD)
         
-        ttk.Label(play, text=f"空欄 = {OUT_ROOT}", style="Hint.TLabel").grid(row=5, column=1, sticky="w")
+        ttk.Label(play, text=f"空欄 = {OUT_ROOT}", style="Hint.TLabel").grid(row=6, column=1, sticky="w")
 
         self.compress_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(play, text="ELF コードを圧縮する (推奨。オフにすると約 8 秒速いが CIA が約 0.7MB 大きい)",
-                        variable=self.compress_var).grid(row=6, column=1, sticky="w")
+                        variable=self.compress_var).grid(row=7, column=1, sticky="w")
 
         # ---- 素材
         assets = ttk.LabelFrame(outer, text="素材", padding=PAD)
@@ -361,7 +370,7 @@ class App:
     def apply_form(self, f: gm.TemplateForm) -> None:
         self._loading = True
         try:
-            for k in ("title", "long_title", "publisher", "title_id", "version", "product_code", "output"):
+            for k in ("title", "long_title", "publisher", "title_id", "version", "product_code", "output", "frame_at"):
                 self.vars[k].set(getattr(f, k))
             self.loop_var.set(f.loop)
             self.volume_var.set(f.volume)
@@ -379,6 +388,7 @@ class App:
             version=self.vars["version"].get(), product_code=self.vars["product_code"].get(),
             loop=bool(self.loop_var.get()), volume=round(float(self.volume_var.get()), 2),
             preset=label_to_name.get(self.preset_var.get(), ""), output=self.vars["output"].get(),
+            frame_at=self.vars["frame_at"].get(),
         )
 
     def on_volume_moved(self, _value=None) -> None:

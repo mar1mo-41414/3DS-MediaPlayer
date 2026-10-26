@@ -273,7 +273,7 @@ class AssetTest(unittest.TestCase):
 
     def test_assets_table(self):
         self.assertEqual([a.stem for a in g.ASSETS], ["video", "icon", "bottom", "select_sound", "banner"])
-        self.assertEqual([a.required for a in g.ASSETS], [True, True, True, False, False])
+        self.assertEqual([a.required for a in g.ASSETS], [True, False, False, False, False])  # 必須は動画だけ
 
     def test_unset_assets(self):
         self.assertIsNone(self.t.find_asset("video"))
@@ -364,10 +364,13 @@ class AssetTest(unittest.TestCase):
         self.t.remove_asset("banner")
         self.assertIsNone(self.t.find_asset("select_sound"))
         self.t.remove_asset("select_sound")  # 無くても失敗しない
-        self.t.set_asset("icon", make_image(self.src / "i.png"))
-        with self.assertRaises(MkciaError):
-            self.t.remove_asset("icon")
-        self.assertIsNotNone(self.t.find_asset("icon"))
+        self.t.set_asset("video", make_video(self.src / "v.mp4"))
+        with self.assertRaises(MkciaError):  # 動画は必須なので削除できない
+            self.t.remove_asset("video")
+        self.assertIsNotNone(self.t.find_asset("video"))
+        self.t.set_asset("icon", make_image(self.src / "i.png"))  # icon / bottom は任意 (無ければ動画から作る)
+        self.t.remove_asset("icon")
+        self.assertIsNone(self.t.find_asset("icon"))
 
     def test_remove_removes_every_extension(self):
         self.t.set_asset("select_sound", make_audio(self.src / "s.wav"))
@@ -509,10 +512,10 @@ class JobRealTest(unittest.TestCase):
         self.assertFalse((self.d / "o.cia").exists())  # 検証だけで作らない
 
     def test_validation_job_reports_problems(self):
-        t = make_template(self.d / "t", skip=("icon.png",))
+        t = make_template(self.d / "t", skip=("video.mp4",))
         ev = self.drain(g.start_validation(BuildOptions(t, self.d / "o.cia")))
         self.assertEqual(ev[-1][0], "error")
-        self.assertIn("icon", ev[-1][1])
+        self.assertIn("video", ev[-1][1])
 
     def test_build_job_produces_a_cia_and_stages(self):
         t = make_template(self.d / "t")

@@ -1,4 +1,5 @@
 import argparse
+import math
 import sys
 import traceback
 from pathlib import Path
@@ -44,6 +45,16 @@ def resolve_template(arg: Path) -> Path:
     )
 
 
+def _seconds(text: str) -> float:
+    try:
+        v = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"秒数は数値で指定してください: {text!r}") from None
+    if not math.isfinite(v) or v < 0:
+        raise argparse.ArgumentTypeError(f"秒数は 0 以上の有限の数で指定してください: {text!r}")
+    return v
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         prog="mkcia",
@@ -57,6 +68,9 @@ def main(argv=None) -> int:
                     "(タイトルは NAME、タイトルIDは他と重ならない有効な値を自動で付ける)")
     ap.add_argument("-o", "--output", type=Path, help="出力 .cia のパス (指定すると meta.json の output / --output-dir より優先)")
     ap.add_argument("--output-dir", type=Path, help=f"出力先ディレクトリ (既定: {OUT_ROOT})")
+    ap.add_argument("--frame-at", type=_seconds, metavar="SEC",
+                    help="icon / bottom が無いとき、動画のこの秒数のフレームから作る (meta.json の frame_at より優先。"
+                    "指定すると埋め込み画像より優先。省略時は埋め込み画像、無ければ長さの 15%% の位置)")
     ap.add_argument("--preset", choices=sorted(video.PRESETS),
                     help=f"エンコードプリセット (meta.json の preset より優先。どちらも無ければ {video.DEFAULT_PRESET})")
     ap.add_argument("--elf", type=Path, default=DEFAULT_ELF, help="ROM 本体の ELF")
@@ -88,7 +102,8 @@ def main(argv=None) -> int:
         tpl = resolve_template(args.template)
         build_cia(
             BuildOptions(tpl, args.output, preset=args.preset, output_dir=args.output_dir, elf=args.elf,
-                         keep_work=args.keep_work, compress_code=not args.no_compress),
+                         keep_work=args.keep_work, compress_code=not args.no_compress,
+                         frame_at=args.frame_at),
             log=lambda m: print(m, flush=True),
         )
     except Cancelled:

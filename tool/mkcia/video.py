@@ -75,7 +75,7 @@ def encode_video(
 
     cmd = [
         find_tool("ffmpeg"), "-v", "error", "-y", "-i", src,
-        "-map", "0:v:0", "-vf", video_filter(p, fps),
+        "-map", "0:V:0", "-vf", video_filter(p, fps),  # V = カバー画像 (attached_pic) を除く映像
         "-c:v", "libx264", "-profile:v", "baseline", "-level", "3.0",
         "-preset", "slow", "-b:v", f"{p.video_kbps}k",
         "-maxrate", f"{p.video_kbps * 3 // 2}k", "-bufsize", f"{p.video_kbps * 3}k",

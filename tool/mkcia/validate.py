@@ -32,8 +32,8 @@ class TemplateFiles:
     root: Path
     meta: Path
     video: Path
-    icon: Path
-    bottom: Path
+    icon: Optional[Path] = None  # 無ければ動画から作る (extract.py)
+    bottom: Optional[Path] = None
     sound: Optional[Path] = None
     banner: Optional[Path] = None
 
@@ -71,30 +71,27 @@ def check_template(template_dir: Path) -> TemplateFiles:
     if not root.is_dir():
         raise MkciaError(f"テンプレートはディレクトリで指定してください (ファイルが渡されました): {root}")
 
-    required = [
-        ("meta", "meta.json", ("",)),
-        ("video", "video.(mp4|mkv|mov|avi|webm|m4v)", None),
-        ("icon", "icon.(png|jpg|jpeg|bmp|webp|gif)", None),
-        ("bottom", "bottom.(png|jpg|jpeg|bmp|webp|gif)", None),
-    ]
+    # 必須は meta.json と動画だけ。icon / bottom は無ければ動画から作る
     found = {}
     missing: List[str] = []
-    for key, label, _ in required:
-        if key == "meta":
-            p = root / "meta.json"
-            p = p if (p.exists() or p.is_symlink()) else None
-        elif key == "video":
-            p = _first_existing(root, "video", VIDEO_EXTS)
-        else:
-            p = _first_existing(root, key, IMAGE_EXTS)
-        if p is None:
-            missing.append(label)
-        else:
-            found[key] = _check_regular_file(p, p.name)
+    meta_p = root / "meta.json"
+    if meta_p.exists() or meta_p.is_symlink():
+        found["meta"] = _check_regular_file(meta_p, "meta.json")
+    else:
+        missing.append("meta.json")
+    video_p = _first_existing(root, "video", VIDEO_EXTS)
+    if video_p is None:
+        missing.append("video.(mp4|mkv|mov|avi|webm|m4v)")
+    else:
+        found["video"] = _check_regular_file(video_p, video_p.name)
     if missing:
         raise MkciaError(
             "テンプレートに必要なファイルがありません: " + ", ".join(missing) + f"\n  ({root})"
         )
+    for key in ("icon", "bottom"):  # あれば検証する (空・ディレクトリなどは、無いものとせずエラー)
+        p = _first_existing(root, key, IMAGE_EXTS)
+        if p is not None:
+            found[key] = _check_regular_file(p, p.name)
 
     sound = _first_existing(root, "select_sound", SOUND_EXTS)
     banner = _first_existing(root, "banner", IMAGE_EXTS)
@@ -102,8 +99,8 @@ def check_template(template_dir: Path) -> TemplateFiles:
         root=root,
         meta=found["meta"],
         video=found["video"],
-        icon=found["icon"],
-        bottom=found["bottom"],
+        icon=found.get("icon"),
+        bottom=found.get("bottom"),
         sound=_check_regular_file(sound, sound.name) if sound else None,
         banner=_check_regular_file(banner, banner.name) if banner else None,
     )
@@ -127,6 +124,11 @@ def _probe(path: Path, label: str, extra: Optional[List[str]] = None) -> dict:
         return json.loads(out)
     except json.JSONDecodeError as e:
         raise MkciaError(f"{label} の情報を解析できません: {path}") from e
+
+
+def probe_json(path: Path, label: Optional[str] = None) -> dict:
+    """ffprobe の JSON (format と streams)。読めなければファイル名付きの MkciaError。"""
+    return _probe(path, label or Path(path).name)
 
 
 def _num(x) -> Optional[float]:

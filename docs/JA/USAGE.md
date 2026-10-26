@@ -10,8 +10,8 @@ README のクイックスタートの詳細版。
 ```
 template/<名前>/
 ├── video.mp4          元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコード。mkv/mov/avi/webm/m4v も可)
-├── icon.png           ホームメニューのアイコン (48x48 に自動リサイズ。jpg/bmp/webp/gif も可)
-├── bottom.png         下画面に表示する静止画 (320x240 に自動リサイズ。同上)
+├── icon.png           ホームメニューのアイコン (省略可。48x48 に自動リサイズ。jpg/bmp/webp/gif も可)
+├── bottom.png         下画面に表示する静止画 (省略可。320x240 に自動リサイズ。同上)
 ├── select_sound.wav   アイコン選択音 (省略可。mp3/ogg/flac/m4a/aac も可。先頭 3 秒を使い末尾をフェードアウト)
 ├── banner.png         バナー画像 (省略可。省略時は icon.png から生成)
 └── meta.json
@@ -19,6 +19,20 @@ template/<名前>/
 
 拡張子は上記のどれでもよく、中身は ffmpeg が読めればよい (拡張子と中身が違っていても可)。
 同じ種類のファイルが複数あるときは、上に書いた拡張子の順で最初のものを使う。
+必須なのは `meta.json` と動画だけ。
+
+### icon / bottom が無いとき (動画から作る)
+
+`icon.*` や `bottom.*` が無ければ、ビルド時に動画から画像を作る。あるものは、そのまま使う (置き換えない)。
+
+1. 動画に**埋め込み画像**があれば、それを使う (mkv の添付画像、mp4 のカバーアートなど。ffmpeg が画像として認識するもの。
+   `cover` を含む名前のものを優先)。埋め込み画像が読めない場合は無視する。
+2. 無ければ、動画の**途中のフレーム**を使う。秒数は `frame_at` (下記) で指定でき、省略すると動画の長さの 15% の位置
+   (最大 30 秒。冒頭の暗転やロゴを避けるため)。
+
+`frame_at` を明示したときは、埋め込み画像があってもそのフレームを使う。回転や、画素が正方形でない動画は補正して取り出す。
+作った画像から、アイコンは中央を正方形に切り抜いて、下画面とバナーは縦横比を保って余白付きで作る。
+`icon` だけ / `bottom` だけ無い場合は、無いほうだけを作る。
 
 ### meta.json
 
@@ -33,6 +47,7 @@ template/<名前>/
 | `loop` | | ループ再生 (既定 `false`。`false` なら最後まで再生して、黒くフェードアウトしてホームへ戻る) |
 | `volume` | | 音量 0.0〜1.0 (既定 `1.0`) |
 | `preset` | | エンコードプリセット名 (下表。既定 `medium`) |
+| `frame_at` | | icon / bottom が無いとき、動画からフレームを取る秒数 (0 以上、動画の長さ未満。既定は埋め込み画像、無ければ長さの 15%) |
 | `output` | | 出力ファイル名 (`.cia` は省略可。ディレクトリや `<>:"/\|?*` は不可。既定は `<テンプレート名>.cia`) |
 
 タイトルID は、同じ ID の CIA を 2 つインストールすると上書きし合うので、アプリごとに変える。
@@ -58,6 +73,7 @@ scripts/mkcia.sh --new MyMovie            # template/example をコピーして 
 scripts/mkcia.sh MyMovie                  # template/MyMovie → out/<output>.cia
 scripts/mkcia.sh --list                   # template/ 配下のテンプレート一覧
 scripts/mkcia.sh MyMovie --preset light   # meta.json の preset を一時的に上書き
+scripts/mkcia.sh MyMovie --frame-at 45    # icon/bottom が無いとき、動画の 45 秒のフレームから作る
 scripts/mkcia.sh MyMovie --output-dir ~/Downloads
 scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # パスでも指定できる (-o は出力ファイルを直接指定)
 ```
@@ -68,6 +84,7 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # パスでも指定できる (-o �
 - `--new NAME`: `template/example` を `template/NAME` にコピーして、`title` を `NAME`、`title_id` を他のテンプレートと重ならない
   有効な値にする (雛形の `long_title` と `output` は引き継がない)。コピーした時点でそのままビルドでき、素材と `meta.json` を
   自分のものに差し替えていける。同じ名前や使えない名前、`template/example` が無い場合はエラー。
+- `--frame-at SEC`: icon / bottom が無いときに動画から取るフレームの秒数 (`meta.json` の `frame_at` より優先)。
 - オプション: `--elf` (ROM 本体の ELF)、`--keep-work DIR` (中間生成物を残す)、`--no-compress` (ELF コードの圧縮を省いて約 8 秒速い。
   CIA が約 0.7MB 大きくなる。主にテスト用)、`--debug` (想定外のエラー時にトレースバックを表示)。
 - 終了コード: `0` 成功 / `1` 入力などユーザーが直せるエラー / `2` 想定外のエラー / `130` 中断。
@@ -79,7 +96,8 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # パスでも指定できる (-o �
 
 - 外部ツール (ffmpeg / ffprobe / bannertool / 3dstool / makerom) の有無、ffmpeg に libx264 と aac があるか。
 - ROM の ELF が 32bit ARM の ELF か。
-- テンプレートの必要ファイルの有無・空ファイル・ディレクトリ・読み取り権限。
+- テンプレートの必要ファイル (`meta.json` と動画) の有無、あるファイルの空・ディレクトリ・読み取り権限。
+  `frame_at` が動画の長さの範囲内か (icon / bottom が無いときだけ)。
 - `meta.json` の JSON / 型 / 長さ / 値の範囲 (タイトルID の範囲、バージョンの範囲、`output` に使えない文字など)。
 - 動画に映像があるか・0.5 秒以上か、画像・音声として読めるか、CIA が 4GB (FAT32 の上限) を超えないか。
 - 出力が `.cia` で書き込めるか、入力ファイルを上書きしないか。

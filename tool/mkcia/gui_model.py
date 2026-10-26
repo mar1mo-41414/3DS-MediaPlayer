@@ -48,8 +48,8 @@ class AssetSpec:
 
 ASSETS: Tuple[AssetSpec, ...] = (
     AssetSpec("video", "動画", VIDEO_EXTS, True, "video"),
-    AssetSpec("icon", "アイコン", IMAGE_EXTS, True, "image"),
-    AssetSpec("bottom", "下画面の画像", IMAGE_EXTS, True, "image"),
+    AssetSpec("icon", "アイコン", IMAGE_EXTS, False, "image"),  # 無ければ動画から作る
+    AssetSpec("bottom", "下画面の画像", IMAGE_EXTS, False, "image"),  # 同上
     AssetSpec("select_sound", "タイトル音", SOUND_EXTS, False, "audio"),
     AssetSpec("banner", "バナー画像", IMAGE_EXTS, False, "image"),
 )
@@ -94,6 +94,7 @@ class TemplateForm:
     volume: float = 1.0
     preset: str = ""  # "" = 指定なし (既定のプリセット)
     output: str = ""  # "" = テンプレート名
+    frame_at: str = ""  # "" = 自動 (埋め込み画像、無ければ長さの 15% の位置)。icon / bottom が無いときだけ使う
 
     def to_meta_dict(self) -> dict:
         """meta.json に書く辞書。空の任意項目は書かない。"""
@@ -109,10 +110,16 @@ class TemplateForm:
             v = getattr(self, key).strip()
             if v:
                 d[key] = v
+        fa = self.frame_at.strip()
+        if fa:
+            try:
+                d["frame_at"] = float(fa)
+            except ValueError:
+                d["frame_at"] = fa  # 文字列のまま渡して、parse_meta に「数値で」とエラーにさせる
         return d
 
 
-_OPTIONAL_KEYS = ("long_title", "product_code", "preset", "output")
+_OPTIONAL_KEYS = ("long_title", "product_code", "preset", "output", "frame_at")
 
 
 def validate_form(form: TemplateForm):
@@ -181,6 +188,13 @@ def _read_json_dict(path: Path) -> Tuple[dict, Optional[str]]:
     return data, None
 
 
+def _fmt_seconds(v) -> str:
+    """meta.json の frame_at (数値) を入力欄用の文字列にする。数値でなければ空。"""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return ""
+    return f"{v:g}"
+
+
 def _as_text(v) -> str:
     return v if isinstance(v, str) else ("" if v is None else str(v))
 
@@ -224,6 +238,7 @@ class TemplateDir:
             volume=float(vol) if isinstance(vol, (int, float)) and not isinstance(vol, bool) else 1.0,
             preset=_as_text(data.get("preset")),
             output=_as_text(data.get("output")),
+            frame_at=_fmt_seconds(data.get("frame_at")),
         )
         return form, warnings
 
@@ -308,7 +323,11 @@ class TemplateDir:
     def describe_asset(self, stem: str) -> str:
         p = self.find_asset(stem)
         if p is None:
-            return "未設定" + ("" if not ASSET_BY_STEM[stem].required else " (必須)")
+            if ASSET_BY_STEM[stem].required:
+                return "未設定 (必須)"
+            if stem in ("icon", "bottom"):
+                return "未設定 (ビルド時に動画から作る)"
+            return "未設定"
         try:
             return f"{p.name} — " + describe_file(ASSET_BY_STEM[stem].kind, p)
         except MkciaError as e:

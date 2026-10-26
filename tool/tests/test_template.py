@@ -46,16 +46,18 @@ class TemplateStructureTest(unittest.TestCase):
         f.write_text("x")
         self.assertIn("ディレクトリで指定", self.msg(f))
 
-    def test_empty_directory_lists_everything_missing(self):
+    def test_empty_directory_lists_what_is_required(self):
+        """必須は meta.json と動画だけ。icon / bottom は無ければ動画から作るので、挙げない。"""
         d = self.root / "empty"
         d.mkdir()
         m = self.msg(d)
-        for label in ("meta.json", "video.", "icon.", "bottom."):
+        for label in ("meta.json", "video."):
             self.assertIn(label, m)
+        for label in ("icon.", "bottom."):
+            self.assertNotIn(label, m)
 
     def test_each_required_file_missing(self):
-        for name, label in (("video.mp4", "video."), ("icon.png", "icon."), ("bottom.png", "bottom."),
-                            ("meta.json", "meta.json")):
+        for name, label in (("video.mp4", "video."), ("meta.json", "meta.json")):
             with self.subTest(name=name):
                 d = make_template(self.root / f"no_{name}", skip=(name,))
                 m = self.msg(d)
@@ -63,10 +65,19 @@ class TemplateStructureTest(unittest.TestCase):
                 self.assertIn("必要なファイルがありません", m)
 
     def test_multiple_missing_are_all_reported(self):
-        d = make_template(self.root / "t", skip=("icon.png", "bottom.png"))
+        d = make_template(self.root / "t", skip=("video.mp4", "meta.json"))
         m = self.msg(d)
-        self.assertIn("icon.", m)
-        self.assertIn("bottom.", m)
+        self.assertIn("video.", m)
+        self.assertIn("meta.json", m)
+
+    def test_icon_and_bottom_are_optional(self):
+        """icon / bottom が無くてもテンプレートとして成立する (動画から作る)。"""
+        for skip in (("icon.png",), ("bottom.png",), ("icon.png", "bottom.png")):
+            with self.subTest(skip=skip):
+                f = check_template(make_template(self.root / ("t_" + "_".join(skip)), skip=skip))
+                self.assertEqual(f.icon is None, "icon.png" in skip)
+                self.assertEqual(f.bottom is None, "bottom.png" in skip)
+                self.assertEqual(f.video.name, "video.mp4")
 
     def test_required_file_is_a_directory(self):
         for name in ("video.mp4", "icon.png", "bottom.png", "meta.json"):

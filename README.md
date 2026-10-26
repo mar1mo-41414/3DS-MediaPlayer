@@ -49,8 +49,8 @@ Put these files in `template/<name>/` (example: `template/example/`).
 | File | Content |
 |---|---|
 | `video.mp4` | Source video (any format/resolution; the tool re-encodes it for the 3DS) |
-| `icon.png` | HOME Menu icon |
-| `bottom.png` | Still image shown on the bottom screen |
+| `icon.png` | HOME Menu icon (optional; made from the video if absent) |
+| `bottom.png` | Still image shown on the bottom screen (optional; made from the video if absent) |
 | `select_sound.wav` | Sound played when the icon is selected (optional; mp3 etc. also work) |
 | `meta.json` | Title, publisher, title ID, version, ... |
 
@@ -71,6 +71,8 @@ Example `meta.json`:
 
 - `title_id` must look like `000400000xxxxx00` (`x` = 5 hex digits). Use a different one per app
   (two CIAs with the same ID overwrite each other).
+- If `icon.png` / `bottom.png` are missing, they are made from the video: from an image embedded in it (e.g. an attachment in an mkv),
+  otherwise from a frame in the middle of the video (`frame_at` chooses the second). Files that exist are used as they are.
 - `preset` trades quality for speed. On an Old 3DS use `medium` (default) or `light`. `high` / `standard` are meant for a New 3DS but are **untested there**.
 
 All keys, the presets, the CLI options and how errors are reported: [docs/EN/USAGE.md](docs/EN/USAGE.md).

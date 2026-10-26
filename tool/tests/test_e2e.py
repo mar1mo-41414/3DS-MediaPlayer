@@ -304,7 +304,7 @@ class FailureTest(E2EBase):
         self.assertIn("nonexistent", str(cm.exception))
 
     def test_missing_pieces_of_the_template(self):
-        for name in ("video.mp4", "icon.png", "bottom.png", "meta.json"):
+        for name in ("video.mp4", "meta.json"):  # icon / bottom は無くてよい (動画から作る)
             with self.subTest(missing=name):
                 self.fails(make_template(self.d / f"m_{name}", skip=(name,)), "必要なファイルがありません",
                            out=self.d / f"m_{name}.cia")

@@ -48,8 +48,8 @@ scripts/mkcia-gui.sh                    # GUI で同じことをする (要: pyt
 | ファイル | 内容 |
 |---|---|
 | `video.mp4` | 元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコードする) |
-| `icon.png` | ホームメニューのアイコン |
-| `bottom.png` | 下画面に表示する静止画 |
+| `icon.png` | ホームメニューのアイコン (省略可。無ければ動画から作る) |
+| `bottom.png` | 下画面に表示する静止画 (省略可。無ければ動画から作る) |
 | `select_sound.wav` | アイコン選択音 (省略可。mp3 なども可) |
 | `meta.json` | タイトル名・公開者・タイトルID・バージョンなど |
 
@@ -69,6 +69,8 @@ scripts/mkcia-gui.sh                    # GUI で同じことをする (要: pyt
 ```
 
 - `title_id` は `000400000xxxxx00` 形式 (`x` は 16 進 5 桁)。アプリごとに変える (同じ ID の CIA は上書きし合う)。
+- `icon.png` / `bottom.png` が無いときは、動画の埋め込み画像 (mkv の添付画像など)、無ければ動画の途中のフレームから自動で作る
+  (`frame_at` で秒数を指定できる)。あれば、そのまま使う。
 - `preset` は画質と軽さの選択。旧 3DS は `medium` (既定) か `light`。`high` / `standard` は New 3DS 向けだが、**New 3DS では未検証**。
 
 キーの一覧、プリセット、CLI のオプション、エラーの扱いは [docs/JA/USAGE.md](docs/JA/USAGE.md) を参照。

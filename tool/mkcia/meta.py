@@ -13,13 +13,14 @@ from typing import List, Optional
 from .errors import MkciaError
 
 REQUIRED = ("title", "title_id", "version", "publisher")
-KNOWN_KEYS = REQUIRED + ("long_title", "product_code", "loop", "volume", "preset", "output")
+KNOWN_KEYS = REQUIRED + ("long_title", "product_code", "loop", "volume", "preset", "output", "frame_at")
 
 # SMDH の文字数上限 (UTF-16 コード単位): short title 64 / long title 128 / publisher 64
 MAX_TITLE = 64
 MAX_LONG_TITLE = 128
 MAX_PUBLISHER = 64
 MAX_META_BYTES = 1_000_000
+MAX_FRAME_AT_SEC = 24 * 3600  # frame_at の上限 (秒)
 MAX_OUTPUT_NAME_BYTES = 200
 _BAD_FILENAME_CHARS = set('<>:"/\\|?*')  # SD カード (FAT) に置けない文字 + パス区切り
 
@@ -41,6 +42,7 @@ class Meta:
     volume: float
     preset: Optional[str] = None  # エンコードプリセット名 (None なら既定)。名前の妥当性は pipeline で確認
     output: Optional[str] = None  # 出力ファイル名 (必ず .cia で終わる。None ならテンプレート名)
+    frame_at: Optional[float] = None  # icon / bottom が無いとき、動画からフレームを取る秒数 (None なら自動)
     warnings: List[str] = field(default_factory=list)  # 未知のキーなど。エラーではないが知らせたいこと
 
     @property
@@ -179,6 +181,14 @@ def parse_meta(data) -> Meta:
     preset = _get_str(data, "preset", False) or None
     output = _check_output_name(_get_str(data, "output", False)) if data.get("output") is not None else None
 
+    frame_at = data.get("frame_at")
+    if frame_at is not None:
+        if isinstance(frame_at, bool) or not isinstance(frame_at, (int, float)):
+            raise MkciaError(f"meta.json の frame_at は 0 以上の秒数 (数値) で指定してください ({_type_name(frame_at)}が渡されました: {frame_at!r})")
+        frame_at = float(frame_at)
+        if not math.isfinite(frame_at) or not 0.0 <= frame_at <= MAX_FRAME_AT_SEC:
+            raise MkciaError(f"meta.json の frame_at は 0〜{MAX_FRAME_AT_SEC} 秒で指定してください: {frame_at}")
+
     warnings = [f"meta.json の未知のキーは無視します: {k}" for k in data if k not in KNOWN_KEYS]
     return Meta(
         title=title,
@@ -191,6 +201,7 @@ def parse_meta(data) -> Meta:
         volume=volume,
         preset=preset,
         output=output,
+        frame_at=frame_at,
         warnings=warnings,
     )
 

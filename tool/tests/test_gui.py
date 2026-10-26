@@ -416,8 +416,8 @@ class AssetFlowTest(GuiTestBase):
         self.assertIsNone(self.app.template.find_asset("select_sound"))
         self.assertIn("未設定", self.app.asset_status["select_sound"].get())
 
-    def test_remove_buttons_exist_only_for_optional_assets(self):
-        self.assertEqual(sorted(self.app.asset_remove), ["banner", "select_sound"])
+    def test_remove_buttons_exist_for_every_optional_asset(self):  # 必須は動画だけ
+        self.assertEqual(sorted(self.app.asset_remove), ["banner", "bottom", "icon", "select_sound"])
 
     def test_replacing_a_video_with_a_different_extension(self):
         self.choose("video", make_video(self.src / "a.mp4"))

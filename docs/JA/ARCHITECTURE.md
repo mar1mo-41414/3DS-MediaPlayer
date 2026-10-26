@@ -59,6 +59,7 @@ devkitARM + libctru + citro2d/citro3d。ffmpeg は H.264 / AAC / MOV だけの�
 | `validate.py` | 入力・出力先・ELF・外部ツールの事前検証 (重い処理の前にまとめて) |
 | `meta.py` | `meta.json` の読み込みと検証 (型・長さ・範囲) |
 | `video.py` | プリセットと、ffmpeg による動画の事前エンコード |
+| `extract.py` | `icon` / `bottom` が無いとき、動画の埋め込み画像 → 指定秒数のフレームから元画像を作る |
 | `assets.py` | アイコン (48x48)・バナー (256x128)・下画面 (320x240)・バナー音 (WAV 3 秒以内) の整形 |
 | `banner.py` | bannertool で SMDH / banner を作る |
 | `romfs.py` | romfs ディレクトリの組み立てと 3dstool での `romfs.bin` |

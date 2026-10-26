@@ -10,8 +10,8 @@ refer to it by name (everything under `template/` except `example` is ignored by
 ```
 template/<name>/
 ├── video.mp4          source video (any format/resolution; re-encoded for the 3DS. mkv/mov/avi/webm/m4v also work)
-├── icon.png           HOME Menu icon (resized to 48x48; jpg/bmp/webp/gif also work)
-├── bottom.png         still image for the bottom screen (resized to 320x240; same formats)
+├── icon.png           HOME Menu icon (optional; resized to 48x48; jpg/bmp/webp/gif also work)
+├── bottom.png         still image for the bottom screen (optional; resized to 320x240; same formats)
 ├── select_sound.wav   sound played when the icon is selected (optional; mp3/ogg/flac/m4a/aac also work;
 │                      the first 3 seconds are used, with a short fade-out)
 ├── banner.png         banner image (optional; generated from icon.png if absent)
@@ -20,6 +20,20 @@ template/<name>/
 
 Any of the listed extensions is accepted and the content only has to be readable by ffmpeg (a file whose extension
 does not match its content is fine). If several files of one kind exist, the first extension in the order above wins.
+Only `meta.json` and the video are required.
+
+### When icon / bottom are missing (made from the video)
+
+If `icon.*` or `bottom.*` is missing, the build makes the image from the video. Files that exist are used as they are (never replaced).
+
+1. If the video has an **embedded image** (an attachment in an mkv, cover art in an mp4, ... anything ffmpeg recognises as an image;
+   names containing `cover` come first), that image is used. An unreadable embedded image is ignored.
+2. Otherwise a **frame from the middle of the video** is used. `frame_at` (below) chooses the second; by default it is at 15 % of
+   the duration (at most 30 s, to avoid a dark intro or a logo).
+
+An explicit `frame_at` is honoured even when an embedded image exists. Rotated and non-square-pixel videos are corrected.
+The icon is a centre square crop of the image; the bottom image and the banner keep the aspect ratio with margins.
+If only one of `icon` / `bottom` is missing, only that one is made.
 
 ### meta.json
 
@@ -34,6 +48,7 @@ does not match its content is fine). If several files of one kind exist, the fir
 | `loop` | no | Loop playback (default `false`; if `false` the video plays to the end, fades out to black and returns to the HOME Menu) |
 | `volume` | no | Volume 0.0–1.0 (default `1.0`) |
 | `preset` | no | Encoding preset name (see below; default `medium`) |
+| `frame_at` | no | Second of the video to take the frame from when icon / bottom are missing (0 or more, less than the duration; default: the embedded image, else 15 % of the duration) |
 | `output` | no | Output file name (`.cia` optional; no directories or `<>:"/\|?*`; default `<template name>.cia`) |
 
 Two CIAs with the same title ID overwrite each other when installed, so give every app its own ID.
@@ -60,6 +75,7 @@ scripts/mkcia.sh --new MyMovie            # copy template/example to template/My
 scripts/mkcia.sh MyMovie                  # template/MyMovie -> out/<output>.cia
 scripts/mkcia.sh --list                   # list the templates under template/
 scripts/mkcia.sh MyMovie --preset light   # override meta.json's preset for this run
+scripts/mkcia.sh MyMovie --frame-at 45    # if icon/bottom are missing, make them from the frame at 45 s
 scripts/mkcia.sh MyMovie --output-dir ~/Downloads
 scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # a path works too (-o names the output file directly)
 ```
@@ -70,6 +86,7 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # a path works too (-o names the ou
 - `--new NAME`: copies `template/example` to `template/NAME`, sets `title` to `NAME` and `title_id` to a valid value that does not
   collide with other templates (the example's `long_title` and `output` are not carried over). The copy builds right away, so you can
   replace the assets and `meta.json` step by step. It fails for a duplicate or invalid name, or if `template/example` is missing.
+- `--frame-at SEC`: second of the video to take the frame from when icon / bottom are missing (overrides `frame_at` in `meta.json`).
 - Options: `--elf` (ROM ELF), `--keep-work DIR` (keep intermediate files), `--no-compress` (skip compressing the ELF
   code: ~8 s faster, CIA ~0.7 MB larger; mostly for tests), `--debug` (print a traceback on unexpected errors).
 - Exit codes: `0` success / `1` a problem with the input that you can fix / `2` unexpected error / `130` interrupted.
@@ -81,7 +98,8 @@ Before any heavy work (encoding), everything below is checked and a problem is r
 
 - The external tools (ffmpeg / ffprobe / bannertool / 3dstool / makerom) exist, and ffmpeg has libx264 and aac.
 - The ROM ELF is a 32-bit ARM ELF.
-- The template files exist, are not empty or directories, and are readable.
+- The required template files (`meta.json` and the video) exist; the files that exist are not empty or directories, and are readable.
+  `frame_at` is within the video (only when icon / bottom are missing).
 - `meta.json`: JSON syntax, types, lengths, value ranges (title ID range, version range, characters not allowed in `output`, ...).
 - The video has a video stream and is at least 0.5 s long; the images and audio can be read; the CIA stays under
   4 GB (the FAT32 limit).

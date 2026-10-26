@@ -20,9 +20,17 @@ def _fit(src: Path, dst: Path, w: int, h: int, bg: str, log: Optional[Log]) -> P
     return dst
 
 
-def make_icon(src: Path, dst: Path, log: Optional[Log] = None) -> Path:
-    """ホームメニュー用アイコン (48x48)。"""
-    return _fit(src, dst, 48, 48, "black@0", log)
+def make_icon(src: Path, dst: Path, log: Optional[Log] = None, crop_square: bool = False) -> Path:
+    """ホームメニュー用アイコン (48x48)。
+
+    crop_square=True なら中央を正方形に切り抜いて拡縮する (動画のフレームから作るときは、横長のまま縮めると
+    小さな帯になってしまうため)。False なら余白付きで全体を収める。
+    """
+    if not crop_square:
+        return _fit(src, dst, 48, 48, "black@0", log)
+    _ffmpeg(["-i", src, "-vf", "crop='min(iw,ih)':'min(iw,ih)',scale=48:48:flags=lanczos,format=rgba",
+             "-frames:v", 1, dst], log)
+    return dst
 
 
 def make_banner_image(src: Path, dst: Path, log: Optional[Log] = None) -> Path:

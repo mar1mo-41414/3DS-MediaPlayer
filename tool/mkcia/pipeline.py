@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from . import assets, banner, cia, romfs, video
+import math
+
+from . import assets, banner, cia, extract, romfs, video
 from .errors import MkciaError
 from .meta import load_meta
 from .proc import OUT_ROOT, REPO_ROOT, Log
@@ -34,6 +36,7 @@ class BuildOptions:
     elf: Path = DEFAULT_ELF
     keep_work: Optional[Path] = None  # 指定すると中間生成物をそのディレクトリに残す
     compress_code: bool = True  # False にすると ELF コードの圧縮を省く (makerom が約 8 秒速くなる。主にテスト用)
+    frame_at: Optional[float] = None  # icon / bottom が無いとき動画から取るフレームの秒数 (省略時は meta.json、無ければ自動)
 
 
 @dataclass
@@ -44,6 +47,7 @@ class Resolved:
     video_info: object
     preset: str
     output: Path
+    frame_at: Optional[float] = None  # 引数 > meta.json (None = 埋め込み画像 → 自動の位置)
 
 
 def resolve_preset(opt: BuildOptions, meta) -> str:
@@ -59,6 +63,13 @@ def resolve_preset(opt: BuildOptions, meta) -> str:
             ) from None
         return meta.preset
     return video.DEFAULT_PRESET
+
+
+def resolve_frame_at(opt: BuildOptions, meta) -> Optional[float]:
+    v = opt.frame_at if opt.frame_at is not None else meta.frame_at
+    if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0):
+        raise MkciaError(f"frame_at は 0 以上の秒数で指定してください: {v!r}")
+    return None if v is None else float(v)
 
 
 def resolve_output(opt: BuildOptions, meta, template_root: Path) -> Path:
@@ -78,22 +89,25 @@ def validate_inputs(opt: BuildOptions, log: Log) -> Resolved:
     meta = load_meta(files.meta)
     preset_name = resolve_preset(opt, meta)
     output = resolve_output(opt, meta, files.root)
-    check_output(output, [files.meta, files.video, files.icon, files.bottom,
-                          *(p for p in (files.sound, files.banner) if p)])
+    frame_at = resolve_frame_at(opt, meta)
+    check_output(output, [p for p in (files.meta, files.video, files.icon, files.bottom, files.sound, files.banner) if p])
     for w in meta.warnings:
         log("警告: " + w)
     vinfo = validate_video(files.video)
-    validate_image(files.icon)
-    validate_image(files.bottom)
-    if files.banner:
-        validate_image(files.banner)
+    for img in (files.icon, files.bottom, files.banner):  # 無いものは動画から作るので、ある物だけ検証する
+        if img:
+            validate_image(img)
+    if files.icon is None or files.bottom is None:
+        extract.check_frame_at(frame_at, vinfo)
+    elif frame_at is not None:
+        log("警告: icon と bottom が両方あるので、frame_at は使われません")
     if files.sound:
         validate_audio(files.sound)
     preset = video.get_preset(preset_name)
     check_size(vinfo.duration, preset.video_kbps, preset.audio_kbps)
     if not vinfo.has_audio:
         log("警告: 動画に音声がありません (映像のみになります)")
-    return Resolved(files, meta, vinfo, preset_name, output)
+    return Resolved(files, meta, vinfo, preset_name, output, frame_at)
 
 
 def build_cia(opt: BuildOptions, log: Optional[Log] = None) -> Path:
@@ -120,17 +134,23 @@ def build_cia(opt: BuildOptions, log: Optional[Log] = None) -> Path:
         log(f"[2/6] 動画エンコード (preset={r.preset})")
         enc = video.encode_video(files.video, work / "video.mp4", r.preset, log, info=vinfo)
 
-        # 3. icon / banner / 選択音 -> SMDH, banner
+        # 3. icon / banner / 選択音 -> SMDH, banner。icon / bottom が無ければ動画から作る
         log("[3/6] SMDH / banner 生成")
-        icon = assets.make_icon(files.icon, work / "icon48.png", log)
-        banner_png = assets.make_banner_image(files.banner or files.icon, work / "banner.png", log)
+        generated = None
+        if files.icon is None or files.bottom is None:
+            missing = " / ".join(n for n, p in (("icon", files.icon), ("bottom", files.bottom)) if p is None)
+            generated, how = extract.source_image(files.video, vinfo, r.frame_at, work, log)
+            log(f"{missing} が無いので、{how}から作ります")
+        icon = (assets.make_icon(generated, work / "icon48.png", log, crop_square=True) if files.icon is None
+                else assets.make_icon(files.icon, work / "icon48.png", log))
+        banner_png = assets.make_banner_image(files.banner or files.icon or generated, work / "banner.png", log)
         wav = assets.make_banner_audio(files.sound, work / "banner.wav", log)
         smdh = banner.make_smdh(icon, work / "app.smdh", meta.title, meta.long_title, meta.publisher, log)
         bnr = banner.make_banner(banner_png, wav, work / "app.bnr", log)
 
         # 4. romfs
         log("[4/6] romfs 構築")
-        bottom = assets.make_bottom_image(files.bottom, work / "bottom320.png", log)
+        bottom = assets.make_bottom_image(files.bottom or generated, work / "bottom320.png", log)
         romfs_dir = romfs.stage_romfs(work / "romfs", enc, bottom, meta.loop, meta.volume,
                                       video.get_preset(r.preset).deblock)
         romfs_bin = romfs.build_romfs_bin(romfs_dir, work / "romfs.bin", log)
