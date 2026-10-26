@@ -1,12 +1,12 @@
 # HISTORY
 
-作業履歴・調査の経緯・失敗談・未解決事項。確定した最新情報は README.md を参照。
+作業履歴・調査の経緯・失敗談・未解決事項 (日本語)。確定した最新情報は README.md と docs/ を参照。
 
-## 2026-10-26 初期実装 (start-note.md に基づく)
+## 2026-10-26 初期実装
 
 ### 環境構築
-- devkitARM はホストに入れず Docker (`devkitpro/devkitarm`) でビルド (apt.devkitpro.org が
-  ブロックされるため。Docker Hub 経由)。`devkitpro/devkitarm` には libctru / citro2d / citro3d /
+- devkitARM はホストに入れず Docker (`devkitpro/devkitarm`) でビルド (環境によっては apt.devkitpro.org に
+  接続できないため。Docker Hub 経由)。`devkitpro/devkitarm` には libctru / citro2d / citro3d /
   libpng / zlib は入っているが ffmpeg は無い。
 - `bannertool` (Epicpkmn11 版) と `3dstool` はソースからビルド。bannertool の submodule
   (`buildtools`) が `git://github.com/...` で、環境によって接続タイムアウトする
@@ -45,7 +45,7 @@
 4. **上画面が最初の 1 フレームから更新されない (AzaharPlus)**: 線形 Y2R + `GX_DisplayTransfer`
    方式では、`lin` (Y2R 出力) は常に最新なのに、転送先のテクスチャメモリが更新されず最初の
    フレームのまま固まった。開発用の短い動画では最初の 1 秒付近で止まっていたのを見落とし、
-   Twinkle Night (冒頭が暗転 + ロゴだけ) の変換で発覚した。
+   実際の動画 (冒頭が暗転 + ロゴだけ) の変換で発覚した。
    `GSPGPU_InvalidateDataCache` (lin / tex) を呼んでも直らず、デバッグ用に `lin` と `tex.data` を
    CPU で読んで SD に書き出した後だけ直った (エミュレータのラスタライザキャッシュ絡みと推測。未確定)。
    **Y2R の `BLOCK_8_BY_8` でテクスチャへ直接書く方式に戻して解決** (3Damnesic が実機で使っている方式でもあり、
@@ -76,12 +76,12 @@
   `HW.Memory <Error>`) とアプリ内 SD ログ (`-DDEBUG_LOG`) の方が確実だった。
 
 ### 実機での最初の確認 (2026-10-26) と RSF の修正
-- 旧3DS (CFW) で、Twinkle Night / テスト CIA の両方が起動直後に ErrDisp
+- 旧3DS (CFW) で、実動画の CIA / テスト CIA の両方が起動直後に ErrDisp
   「The SD card was removed.」。映像・音声は一瞬も出ず、デバッグ版でも SD にログが出なかった
   (= `main` に入る前に落ちている)。`dspfirm.cdc` は `sdmc:/3ds/dspfirm.cdc` で正しい。
 - 最初に疑った `APT_SetAppCpuTimeLimit(80)` は的外れ (起動前に落ちているので無関係)。
   ただし 80→30 に下げたのは安全側として残した。
-- **原因 (有力、実機での再確認待ち)**: 生成した CIA の ExHeader の権限不足。ユーザーの実機から取った
+- **原因 (有力、実機での再確認待ち)**: 生成した CIA の ExHeader の権限不足。実機で動いている
   実績のある CIA (FBI.cia / Universal-Updater.cia) と ExHeader を自作パーサで比較して判明:
   - SVC (システムコール) 許可マスクが f0〜f2 の 3 組しか無い (実績 CIA は f0〜f5)。
     RSF に `SystemCallAccess` を書いておらず、さらに `makerom -desc app:4` がテンプレートで
@@ -108,7 +108,7 @@
   バナー音の上限 3 秒に合わせて先頭 3 秒を使い、末尾 0.3 秒をフェードアウト。
 
 ### 画質の検討 (2026-10-26、実機で light が滑らかに動いた後)
-- 方法: Twinkle Night の 40 秒クリップを複数の設定でエンコードし、デバッグビルド (`sdmc:/test_video.mp4` と
+- 方法: 実際の動画の 40 秒クリップを複数の設定でエンコードし、デバッグビルド (`sdmc:/test_video.mp4` と
   `sdmc:/test_config.json` で差し替え可能) の AzaharPlus 上でデコード時間を測定 (20fps の予算は 50ms/フレーム)。
   light (実機で滑らかと確認済み) の 42.8ms を基準に比較。SSIM は時刻合わせがずれて不安定だったので不採用、
   同時刻のフレームを並べて目視。
@@ -148,11 +148,11 @@
   永久に成立しなかった。今までループなしを試していなかったので気づかなかった。→ 「積んだ音声バッファが全て
   再生し終えた」(`audio_idle`) も終了条件に追加。エミュレータでフェード 8 コマを撮って上下とも滑らかに黒くなることを確認。
 - ツール: `meta.json` に `preset` と `output` (出力ファイル名) を追加。優先順位は「引数 > meta.json > 既定」。
-  `scripts/mkcia.sh Twinkle_Night` のように名前だけで `template/<名前>/` を解決し、`out/<output>.cia` に出力
+  `scripts/mkcia.sh MyMovie` のように名前だけで `template/<名前>/` を解決し、`out/<output>.cia` に出力
   (`--list`、`--output-dir`、`-o` あり)。`output` はディレクトリ・FAT で使えない文字・制御文字・長すぎる名前を拒否。
   出力ファイルの権限が一時ファイル由来の 0600 になっていたのを、通常の umask に従う権限に修正 (テストで検出)。
-- 配置: `examples/template` → `template/example`、Twinkle Night は `template/Twinkle_Night` (動画 93MB を含むので
-  `.gitignore` で `template/*` は `example` 以外コミット対象外。`out/` も対象外)。
+- 配置: `examples/template` → `template/example`。個人の動画を入れたテンプレートは大きいので、
+  `.gitignore` で `template/*` は `example` 以外コミット対象外にした (`out/` も対象外)。
 - テスト 222 件 (preset/出力名/解決順の 28 件、テンプレート名解決の 14 件などを追加)。
 
 ### GUI (2026-10-26)
@@ -170,7 +170,7 @@
   出る → `<Destroy>` で取り消す。レイアウトは、ヒントを右の列に置くと入力欄が縮む (列の要求幅が足りなくなる) ので下に置く。
   `event_generate("<Control-s>")` は非表示ウィンドウには届かないので、テストでは deiconify + focus_force してから送る。
 - テスト 347 件 (GUI の通し操作 55 件を含む)。ミューテーション確認 8 通りで全て検出。画面が無い環境では GUI のテストはスキップ。
-  実機の Linux デスクトップでの手動確認はユーザー側 (この環境では Xvfb 上で確認)。
+  GUI の実機デスクトップでの使い勝手は手動で確認済み (問題なし)。
 
 ### タイトルID の範囲 (2026-10-26、GUI で実機ユーザーが踏んだ)
 - 症状: タイトルID `0004000011451400` で、最後の CIA 化 (makerom) になって初めて
@@ -184,10 +184,22 @@
 - 教訓: 外部ツールの制約 (範囲・長さ) は、ドキュメントの記憶ではなく実測してから検証に入れる。最終段まで気づけない検証漏れは
   GUI のように「入力しながら確認する」使い方で特に目立つ。
 
+### 公開に向けた整理 (2026-10-26)
+- GUI で生成したテンプレート (実動画 2 本) が旧3DS の実機で正しく再生されることを確認し、一通り完成とした。
+- 公開前に、全 11 コミットの全リビジョン (テキストとバイナリ) を、パスワード・トークン・メールアドレス・IP・
+  ホスト名・ユーザー名/パスなどの文字列でスキャンして、機密・環境固有の情報が無いことを確認した
+  (含まれていたのは、タイトルID のような任意の値と、コミットの作者表記だけ)。履歴は書き換えずにそのまま公開。
+- README を英語 (`README.md`) と日本語 (`README.ja.md`) に分けて簡潔にし、技術的な内容は `docs/EN`・`docs/JA`
+  (使い方 / 仕組み / 開発) に移した。MIT の `LICENSE` と、同梱 ROM に含まれる FFmpeg (LGPL) などの
+  `THIRD_PARTY_NOTICES.md` を追加。
+- `scripts/run-emu.sh` から個人環境のパスを除き、エミュレータは環境変数 `AZAHAR` / PATH から探すように変更。
+  停止は「このスクリプトが起動したプロセス」(環境変数の目印) だけを対象にして、他のエミュレータを巻き込まない。
+  `scripts/mkcia.sh` などは `python3.12` 固定をやめて `python3` にした。
+
 ## 未解決・今後
-- **実機未確認**。旧3DS での性能 (デコードが間に合うか)、New 3DS でのコア 2 使用 (RSF の
-  `AffinityMask`/`CanAccessCore2` が足りているか)、HOME メニューから戻ったときの下画面の再描画。
+- 旧3DS: `light` / `medium` は映像・音声とも滑らか、タイトル音・終了時のフェードアウトも確認済み。
+  `high` は再生できるが、デコードが再生速度ぎりぎりで音声が少し間延びする。デコードが遅れたときに
+  音声を守る仕組み (遅れたら次のキーフレームまで映像のデコードを飛ばす等) は未実装。
+- **New 3DS は未確認**。コア 2 の使用 (RSF の `AffinityMask` / `CanAccessCore2`) と、`high` / `standard` が動くか。
+- 音声同期の厳密な評価 (リップシンクのずれ) と、ループ時のタイムライン継ぎ目の長時間確認は未実施。
 - 旧3DS 向けに `light` でも足りない場合のプリセット追加 (解像度/fps をさらに下げる)。
-- 音声同期は ndsp の再生位置ベースの実装をエミュレータ (HLE DSP) 上でログ確認したのみ。
-  実際の耳での確認、リップシンクのずれ評価は未実施。
-- ループ時のタイムライン継ぎ目 (音声サンプル数でオフセット) の長時間確認は未実施。
