@@ -1,17 +1,28 @@
-"""meta.json の読み込みと必須項目チェック。"""
+"""meta.json の読み込みと検証。
+
+どんな値が来ても traceback にせず、「どのキーがどう悪いか」を MkciaError で返す。
+"""
 
 import json
+import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import List
 
 from .errors import MkciaError
 
 REQUIRED = ("title", "title_id", "version", "publisher")
+KNOWN_KEYS = REQUIRED + ("long_title", "product_code", "loop", "volume")
+
+# SMDH の文字数上限 (UTF-16 コード単位): short title 64 / long title 128 / publisher 64
+MAX_TITLE = 64
+MAX_LONG_TITLE = 128
+MAX_PUBLISHER = 64
+MAX_META_BYTES = 1_000_000
 
 _TID_RE = re.compile(r"^[0-9A-Fa-f]{16}$")
-_VER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+_VER_RE = re.compile(r"^([0-9]+)\.([0-9]+)\.([0-9]+)$")  # \d は全角・アラビア数字も通すので ASCII のみ
 _PRODUCT_RE = re.compile(r"^CTR-[A-Z]-[A-Z0-9]{4}$")
 
 
@@ -25,6 +36,7 @@ class Meta:
     product_code: str
     loop: bool
     volume: float
+    warnings: List[str] = field(default_factory=list)  # 未知のキーなど。エラーではないが知らせたいこと
 
     @property
     def unique_id(self) -> int:
@@ -32,55 +44,131 @@ class Meta:
         return (int(self.title_id, 16) & 0xFFFFFFFF) >> 8
 
 
-def parse_meta(data: dict) -> Meta:
-    missing = [k for k in REQUIRED if not str(data.get(k, "")).strip()]
+def _type_name(v) -> str:
+    return {str: "文字列", bool: "真偽値", int: "整数", float: "小数", list: "配列", dict: "オブジェクト",
+            type(None): "null"}.get(type(v), type(v).__name__)
+
+
+def _get_str(data: dict, key: str, required: bool, default: str = "") -> str:
+    v = data.get(key)
+    if v is None:
+        if required:
+            raise MkciaError(f"meta.json の必須項目が不足しています: {key}")
+        return default
+    if not isinstance(v, str):
+        raise MkciaError(f"meta.json の {key} は文字列で指定してください ({_type_name(v)}が渡されました: {v!r})")
+    v = v.strip()
+    if required and not v:
+        raise MkciaError(f"meta.json の必須項目が空です: {key}")
+    return v
+
+
+def _check_text(key: str, text: str, max_units: int) -> None:
+    if any(ord(c) < 32 or ord(c) == 127 for c in text):
+        raise MkciaError(f"meta.json の {key} に制御文字 (改行・タブなど) は使えません: {text!r}")
+    try:
+        units = len(text.encode("utf-16-le", errors="strict")) // 2
+    except UnicodeEncodeError as e:
+        raise MkciaError(f"meta.json の {key} に不正な文字が含まれています: {text!r}") from e
+    if units > max_units:
+        raise MkciaError(f"meta.json の {key} が長すぎます ({units} 文字。{max_units} 文字以内にしてください)")
+
+
+def parse_meta(data) -> Meta:
+    if not isinstance(data, dict):
+        raise MkciaError(f"meta.json の最上位はオブジェクト ({{...}}) にしてください ({_type_name(data)}が渡されました)")
+
+    missing = [k for k in REQUIRED if data.get(k) is None]
     if missing:
         raise MkciaError("meta.json の必須項目が不足しています: " + ", ".join(missing))
 
-    tid = str(data["title_id"]).strip().upper().removeprefix("0X")
+    title = _get_str(data, "title", True)
+    publisher = _get_str(data, "publisher", True)
+    long_title = _get_str(data, "long_title", False, default=title) or title
+    _check_text("title", title, MAX_TITLE)
+    _check_text("long_title", long_title, MAX_LONG_TITLE)
+    _check_text("publisher", publisher, MAX_PUBLISHER)
+
+    raw_tid = data["title_id"]
+    if not isinstance(raw_tid, str):
+        raise MkciaError(
+            f"meta.json の title_id は文字列で指定してください ({_type_name(raw_tid)}が渡されました。"
+            ' 例: "000400000FF3A000")'
+        )
+    tid = raw_tid.strip().upper()
+    tid = tid[2:] if tid.startswith("0X") else tid
     if not _TID_RE.match(tid):
-        raise MkciaError(f"title_id は 16 桁の 16 進数で指定してください: {data['title_id']!r}")
+        raise MkciaError(f"title_id は 16 桁の 16 進数で指定してください: {raw_tid!r}")
     if not tid.startswith("00040000") or not tid.endswith("00"):
         raise MkciaError(
             "title_id は 00040000xxxxxx00 形式 (アプリ用) にしてください"
             f" (例: 000400000FF3A000): {tid}"
         )
 
-    m = _VER_RE.match(str(data["version"]).strip())
+    raw_ver = data["version"]
+    if not isinstance(raw_ver, str):
+        raise MkciaError(
+            f"meta.json の version は文字列で指定してください ({_type_name(raw_ver)}が渡されました。"
+            ' 例: "1.0.0")'
+        )
+    m = _VER_RE.match(raw_ver.strip())
     if not m:
-        raise MkciaError(f"version は 'メジャー.マイナー.マイクロ' 形式で指定してください (例: 1.0.0): {data['version']!r}")
+        raise MkciaError(f"version は 'メジャー.マイナー.マイクロ' 形式で指定してください (例: 1.0.0): {raw_ver!r}")
     version = tuple(int(x) for x in m.groups())
     if version[0] > 63 or version[1] > 63 or version[2] > 15:
         raise MkciaError("version の範囲は メジャー/マイナー 0-63、マイクロ 0-15 です")
 
-    title = str(data["title"]).strip()
-    product = str(data.get("product_code", "CTR-P-MPLY")).strip()
+    product = _get_str(data, "product_code", False, default="CTR-P-MPLY") or "CTR-P-MPLY"
     if not _PRODUCT_RE.match(product):
         raise MkciaError(f"product_code は 'CTR-P-XXXX' 形式にしてください: {product!r}")
 
-    volume = float(data.get("volume", 1.0))
-    if not 0.0 <= volume <= 1.0:
-        raise MkciaError("volume は 0.0〜1.0 で指定してください")
+    loop = data.get("loop")
+    if loop is None:
+        loop = False
+    elif not isinstance(loop, bool):
+        raise MkciaError(f"meta.json の loop は true / false で指定してください ({_type_name(loop)}が渡されました: {loop!r})")
 
+    volume = data.get("volume")
+    if volume is None:
+        volume = 1.0
+    elif isinstance(volume, bool) or not isinstance(volume, (int, float)):
+        raise MkciaError(f"meta.json の volume は 0.0〜1.0 の数値で指定してください ({_type_name(volume)}が渡されました: {volume!r})")
+    volume = float(volume)
+    if not math.isfinite(volume) or not 0.0 <= volume <= 1.0:
+        raise MkciaError(f"meta.json の volume は 0.0〜1.0 で指定してください: {volume}")
+
+    warnings = [f"meta.json の未知のキーは無視します: {k}" for k in data if k not in KNOWN_KEYS]
     return Meta(
         title=title,
-        long_title=str(data.get("long_title") or title).strip(),
-        publisher=str(data["publisher"]).strip(),
+        long_title=long_title,
+        publisher=publisher,
         title_id=tid,
         version=version,
         product_code=product,
-        loop=bool(data.get("loop", False)),
+        loop=loop,
         volume=volume,
+        warnings=warnings,
     )
 
 
 def load_meta(path: Path) -> Meta:
+    path = Path(path)
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        raw = path.read_bytes()
     except FileNotFoundError:
         raise MkciaError(f"meta.json が見つかりません: {path}") from None
+    except OSError as e:
+        raise MkciaError(f"meta.json を読めません: {path} ({e.strerror})") from e
+    if len(raw) > MAX_META_BYTES:
+        raise MkciaError(f"meta.json が大きすぎます ({len(raw)} バイト): {path}")
+    try:
+        text = raw.decode("utf-8-sig")  # BOM 付きも許す
+    except UnicodeDecodeError as e:
+        raise MkciaError(f"meta.json は UTF-8 で保存してください: {path}") from e
+    try:
+        data = json.loads(text)
     except json.JSONDecodeError as e:
-        raise MkciaError(f"meta.json の JSON が不正です: {e}") from e
-    if not isinstance(data, dict):
-        raise MkciaError("meta.json の最上位はオブジェクトにしてください")
+        raise MkciaError(f"meta.json の JSON が不正です ({e.lineno} 行 {e.colno} 列): {e.msg}") from e
+    except RecursionError:
+        raise MkciaError("meta.json の入れ子が深すぎます") from None
     return parse_meta(data)

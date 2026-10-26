@@ -50,7 +50,7 @@ Option:
   FreeProductCode         : true
   MediaFootPadding        : false
   EnableCrypt             : false
-  EnableCompress          : true
+  EnableCompress          : {compress}
 
 AccessControlInfo:
   CoreVersion             : 2
@@ -148,13 +148,23 @@ SystemControlInfo:
 """
 
 
-def write_rsf(meta: Meta, dst: Path) -> Path:
+def rsf_title(title: str) -> str:
+    """NCCH の製品名 (最大 8 バイトの ASCII) を作る。非 ASCII や記号は落とし、残らなければ既定値にする。
+
+    ホームメニューに出る名前は SMDH 側のタイトルで、これは内部用の名前。
+    """
+    ascii_only = "".join(c for c in title if c.isascii() and (c.isalnum() or c in " ._-"))[:7].strip()
+    return ascii_only or "MPLAYER"
+
+
+def write_rsf(meta: Meta, dst: Path, compress_code: bool = True) -> Path:
     dst.write_text(
         RSF_TEMPLATE.format(
-            title=meta.title[:7].replace('"', ""),  # ProductInfo の Title は最大 8 バイト程度
+            title=rsf_title(meta.title),
             product_code=meta.product_code,
             unique_id=meta.unique_id,
             syscalls=_SYSCALL_LINES,
+            compress="true" if compress_code else "false",
         ),
         encoding="utf-8",
     )

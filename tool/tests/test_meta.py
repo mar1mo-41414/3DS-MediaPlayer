@@ -108,6 +108,19 @@ class RsfRealDeviceTest(unittest.TestCase):
         self.assertIn("- DirectSdmcWrite", self.text)
         self.assertIn("Logo                    : Nintendo", self.text)
 
+    def test_compress_flag_in_rsf(self):
+        with tempfile.TemporaryDirectory() as d:
+            on = cia.write_rsf(parse_meta(GOOD), Path(d) / "a.rsf").read_text()
+            off = cia.write_rsf(parse_meta(GOOD), Path(d) / "b.rsf", compress_code=False).read_text()
+        self.assertIn("EnableCompress          : true", on)
+        self.assertIn("EnableCompress          : false", off)
+
+    def test_rsf_title_is_ascii_and_short(self):
+        for title, want in (("Hello", "Hello"), ("日本語", "MPLAYER"), ("My 動画 Player", "My  Pla"), ("", "MPLAYER"),
+                            ('a"b', "ab"), ("12345678901", "1234567"), ("  x  ", "x"), ("!!!", "MPLAYER"), ("é", "MPLAYER")):
+            with self.subTest(title=title):
+                self.assertEqual(cia.rsf_title(title), want)
+
     def test_makerom_not_given_desc_template(self):
         """-desc app:N はテンプレート側のサービス/SVC 制限で上書きされ、実機で起動しなくなった。"""
         calls = []
@@ -125,19 +138,6 @@ class RsfRealDeviceTest(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertNotIn("-desc", calls[0])
         self.assertIn("-exefslogo", calls[0])
-
-
-class SoundLookupTest(unittest.TestCase):
-    def test_find_sound_by_extension(self):
-        from mkcia.pipeline import _find_sound
-
-        with tempfile.TemporaryDirectory() as d:
-            d = Path(d)
-            self.assertIsNone(_find_sound(d))
-            (d / "select_sound.mp3").write_bytes(b"x")
-            self.assertEqual(_find_sound(d).name, "select_sound.mp3")
-            (d / "select_sound.wav").write_bytes(b"x")  # wav が優先
-            self.assertEqual(_find_sound(d).name, "select_sound.wav")
 
 
 class PresetTest(unittest.TestCase):

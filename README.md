@@ -28,12 +28,14 @@ scripts/setup-tools.sh        # tools/bin/ に bannertool, 3dstool をビルド 
 
 ```
 template/
-├── video.mp4          元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコード)
-├── icon.png           ホームメニューのアイコン (48x48 に自動リサイズ)
-├── bottom.png         下画面に表示する静止画 (320x240 に自動リサイズ)
-├── select_sound.wav   アイコン選択音 (省略可。mp3/ogg/flac/m4a も可。先頭 3 秒を使い末尾をフェードアウト)
+├── video.mp4          元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコード。mkv/mov/avi/webm/m4v も可)
+├── icon.png           ホームメニューのアイコン (48x48 に自動リサイズ。jpg/bmp/webp/gif も可)
+├── bottom.png         下画面に表示する静止画 (320x240 に自動リサイズ。同上)
+├── select_sound.wav   アイコン選択音 (省略可。mp3/ogg/flac/m4a/aac も可。先頭 3 秒を使い末尾をフェードアウト)
 ├── banner.png         バナー画像 (省略可。省略時は icon.png から生成)
 └── meta.json
+
+ファイル名の拡張子は上記のどれでもよく、中身は ffmpeg が読めればよい (拡張子と中身が違っていても可)。
 ```
 
 `meta.json`:
@@ -60,12 +62,33 @@ scripts/mkcia.sh path/to/template -o out.cia --preset light
 
 | preset | 解像度 | fps | 映像 | 音声 |
 |---|---|---|---|---|
-| `standard` (既定) | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz |
+| `standard` (New 3DS 向け) | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz |
 | `light` | 320x192 (ROM が全画面に拡大) | 20 | 250 kbps | AAC 48 kbps / 32 kHz |
-| `medium` | 360x216 (同上) | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
-| `high` | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
+| `medium` (既定) | 360x216 (同上) | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
+| `high` (New 3DS 向け) | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
 
-テスト: `cd tool && python3 -m unittest discover -s tests`
+### 入力の検証とエラー
+
+エンコードなどの重い処理の前に、テンプレート・メディア・出力先・ROM の ELF・外部ツールをまとめて検証し、
+問題は「どのファイルの何が悪いか」を日本語で表示して終了する (ffmpeg などの生ログは出さない)。
+
+- 検証するもの: 必要ファイルの有無・空ファイル・ディレクトリ・読み取り権限、meta.json の JSON/型/長さ/値の範囲
+  (タイトル 64 文字、長いタイトル 128 文字、公開者 64 文字など)、動画に映像があるか・0.5 秒以上か、
+  画像・音声として読めるか、CIA が 4GB (FAT32 の上限) を超えないか、出力が `.cia` で書き込めるか・入力を上書きしないか。
+- 出力は一時ファイルに作ってから置き換えるので、失敗しても既存の出力を壊さない。
+- 終了コード: `0` 成功 / `1` 入力などユーザーが直せるエラー / `2` 想定外のエラー (`--debug` で詳細) / `130` 中断。
+- `--no-compress`: ELF コードの圧縮を省く (約 8 秒速い。CIA が約 0.7MB 大きくなる。主にテスト用)。
+
+### テスト
+
+```bash
+cd tool && python3 -m unittest discover -s tests     # 約 1 分 / 約 180 件
+```
+
+外部ツール (ffmpeg / bannertool / 3dstool / makerom) と `prebuilt/mediaplayer.elf` が無い環境では、
+それを使うテストは自動でスキップされる。`test_meta*.py` (meta 検証)、`test_template.py` (テンプレート構成)、
+`test_media.py` (壊れた/違う種類のメディア)、`test_environment.py` (ELF・出力先・ツール)、`test_cli.py` (終了コード)、
+`test_e2e.py` (実際に CIA を作る通しテスト: 形式違いの入力、日本語タイトル、失敗時に出力を壊さない、fps・縦横比など)。
 
 ## ROM 本体のビルド
 
@@ -86,9 +109,9 @@ romfs を差し替えたら `scripts/build-rom.sh clean` してからビルド�
 - AzaharPlus (3DS エミュレータ) で、`.3dsx` と生成した `.cia` のインストール・起動・
   上画面の映像・下画面の画像・タイトル/アイコン表示・ループを確認済み。
   エミュレータでは `scripts/run-emu.sh` (仮想ディスプレイ上で起動・スクショ) を使う。
-- **実機 (旧3DS / New 3DS) は未確認**。特に旧3DS では `standard` がデコードに間に合わない
-  可能性が高い (エミュレータ上の計測で 400x240 が約 39 ms/フレーム、320x192 が約 31 ms/フレーム)。
-  旧3DS では `light` を使い、それでも厳しければプリセットの調整が必要。
+- **実機 (旧3DS) で確認済み**: `light` と `medium` は映像・音声とも滑らか (タイトル音も鳴る)。
+  `high` は再生できるが音声が少し間延びする (デコードが再生速度ぎりぎり)。`standard` (24fps) は未確認で、
+  旧3DS では間に合わない可能性が高い。New 3DS は未確認。
 - 音声は ndsp を使うため、実機では DSP ファームウェア (`sdmc:/3ds/dspfirm.cdc`) が必要。
   無い場合は映像だけ再生する。
 - 経緯・失敗談・未解決事項は [HISTORY.md](HISTORY.md)。
