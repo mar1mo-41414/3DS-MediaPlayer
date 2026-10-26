@@ -1,0 +1,12 @@
+start-note.md
+build/
+*.elf
+*.3dsx
+*.cia
+.venv/
+__pycache__/
+tools/
+deps/
+!prebuilt/mediaplayer.elf
+rom/*.smdh
+rom/*.map

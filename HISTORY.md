@@ -1,0 +1,78 @@
+# HISTORY
+
+作業履歴・調査の経緯・失敗談・未解決事項。確定した最新情報は README.md を参照。
+
+## 2026-10-26 初期実装 (start-note.md に基づく)
+
+### 環境構築
+- devkitARM はホストに入れず Docker (`devkitpro/devkitarm`) でビルド (apt.devkitpro.org が
+  ブロックされるため。Docker Hub 経由)。`devkitpro/devkitarm` には libctru / citro2d / citro3d /
+  libpng / zlib は入っているが ffmpeg は無い。
+- `bannertool` (Epicpkmn11 版) と `3dstool` はソースからビルド。bannertool の submodule
+  (`buildtools`) が `git://github.com/...` で、環境によって接続タイムアウトする
+  → `git -c url."https://github.com/".insteadOf=git://github.com/ submodule update` で解決
+  (`scripts/setup-tools.sh` に反映)。
+- `makerom` v0.19.0 は既に導入済みのものを使用。
+
+### ffmpeg のクロスビルド (`scripts/build-ffmpeg.sh`)
+- 3Damnesic の `ffmpeg-configure3ds` を参考に、使うものだけ有効化 (decoder: h264/aac、
+  parser: h264/aac、demuxer: mov/h264、protocol: file)。swscale/avfilter は不要
+  (色変換は Y2R)。
+- ffmpeg 6.1.1 でのビルドは `libavcodec/kbdwin.c` で失敗: newlib の `int32_t` が `long` で、
+  新しい GCC が `int*` との不一致をエラー扱いにする。サイズは同じなので
+  `-Wno-error=incompatible-pointer-types -Wno-error=int-conversion` で回避。
+- 6.1.1 は libavutil の FFT テーブル (`ff_tx_tab_*`、AAC 用) だけで **BSS が約 17MB** になるため
+  4.4.6 に変更 (BSS は約 0.9MB に)。`main.c` は新旧どちらの API でもビルドできるようにしてある
+  (`LIBAVCODEC_VERSION_MAJOR >= 59` で分岐)。
+
+### ROM 本体で詰まった点 (すべて AzaharPlus 上で調査)
+1. **`avformat_open_input("romfs:/video.mp4")` が `AVERROR_PROTOCOL_NOT_FOUND`**:
+   `romfs:` を ffmpeg がプロトコル名と解釈する。`file:romfs:/video.mp4` で解決。
+2. **`avformat_find_stream_info` で無限に止まる**: 切り分けに手間取った (下記の誤診含む)。
+   本当の原因は **メインスレッドのスタックが 32KB (libctru 既定) で、H.264 デコードで溢れた**こと。
+   決め手は Azahar のログ (`HW.Memory <Error> unmapped Write32 0x07FFF...`、ヒープ先頭
+   0x08000000 の直下への書き込み)。`u32 __stacksize__ = 0x40000;` で解決。CIA 版は RSF の
+   `StackSize` で決まる。
+   - 誤診1: ffmpeg の pthread 検出 (`--disable-pthreads` を追加。害は無いのでそのまま)。
+   - 誤診2: ARM asm の不具合 (`--disable-asm` で試したが無関係。asm は有効に戻した)。
+   - 誤診3: BSS 17MB によるヒープ不足 (関係なかったが、4.4.6 化でどのみち解消)。
+3. **映像が 90°回転して引き伸ばされて表示される**: citro2d は `Tex3DS_SubTexture` の
+   `top < bottom` を「90°回転して詰められた画像」と解釈する (`Tex3DS_SubTextureRotated`)。
+   PICA のテクスチャはメモリ先頭行が v=1.0 側なので、反転なしで書いて
+   `top=1.0, bottom=1-h/TEX_H` にすれば正しい向きになる。
+   - この調査中に Y2R の `BLOCK_8_BY_8` 直書きを疑って、Y2R は線形出力 (`BLOCK_LINE`) →
+     `GX_DisplayTransfer` でタイル化する方式に変えた。ダンプで Y2R 出力・転送結果とも正しいことは確認済み。
+     **ただし本当の原因は SubTexture の向きだったので、8x8 直書きに戻しても動く可能性が高い**
+     (3Damnesic は実機でそちらで動いている)。転送 1 回分の節約になるので、実機で性能が足りなければ試す価値あり。
+4. **音声が使えない環境で停止**: エミュレータに DSP ファームウェアが無く `ndspInit` が
+   `0xD880A7FA` で失敗 → 音声パケットを処理し続けて空きバッファ待ちでデコードスレッドが
+   固まった。`ndspInit` 失敗時は音声ストリームを捨てて映像だけ再生するようにした。
+   - エミュレータ (HLE DSP) では、ダミーの `sdmc:/3ds/dspfirm.cdc` (0 埋め 256KB。エミュレータの
+     SD 領域にだけ置いてある) を置くと `ndspInit` が通る。実機の吸い出し済みファームではない。
+
+### 生成ツール
+- ffmpeg の mp4 インターリーブは問題なし (映像/音声パケットが交互に並ぶ)。それでも ROM 側は
+  映像キュー 12 フレーム / 音声 48 バッファで余裕を持たせてある。
+- title_id の UniqueId は `(下位32bit) >> 8`。例 `000400000FF3A000` → `0xFF3A0`
+  (最初のテスト用 ID を取り違えて UniqueId の桁を勘違いしていたのをユニットテストが検出)。
+- CIA 化は `makerom -f cia -elf ... -rsf ... -icon ... -banner ... -romfs ... -exefslogo -target t -desc app:4`。
+  RSF は `rom` 用に最低限のサービス (APT:U, dsp::DSP, fs:USER, gsp::Gpu, hid:USER, ptm:u, y2r:u など) を許可。
+- 生成した CIA を Azahar にインストール (初回は確認ダイアログ) → 起動して、タイトル名・アイコン・
+  config (loop/volume)・映像・下画面を確認。
+
+### エミュレータ操作のメモ
+- `scripts/run-emu.sh start|shot|stop`。`timeout N AppImage` だけでは本体 (`bin/azahar`) が
+  残って何個も溜まる (一時は 11 個残っていた)。`pkill -f` は自分のシェルのコマンドライン
+  にもマッチするので、パターンは `[a]zahar` のようにブラケットで書く。
+- gdbstub (24689) はゲストが止まっている状態の新規インスタンスには安定して繋がらず、
+  古いインスタンスに繋がって誤診の原因になった。ログ (`azahar_log.txt` の
+  `HW.Memory <Error>`) とアプリ内 SD ログ (`-DDEBUG_LOG`) の方が確実だった。
+
+## 未解決・今後
+- **実機未確認**。旧3DS での性能 (デコードが間に合うか)、New 3DS でのコア 2 使用 (RSF の
+  `AffinityMask`/`CanAccessCore2` が足りているか)、HOME メニューから戻ったときの下画面の再描画。
+- 旧3DS 向けに `light` でも足りない場合のプリセット追加 (解像度/fps をさらに下げる)。
+- 音声同期は ndsp の再生位置ベースの実装をエミュレータ (HLE DSP) 上でログ確認したのみ。
+  実際の耳での確認、リップシンクのずれ評価は未実施。
+- ループ時のタイムライン継ぎ目 (音声サンプル数でオフセット) の長時間確認は未実施。
+- Y2R `BLOCK_8_BY_8` 直書きへの再最適化 (上記 3.)。

@@ -1,0 +1,9 @@
+{
+  "title": "TestVideo",
+  "long_title": "Test Video Player",
+  "publisher": "mediaplayer",
+  "title_id": "000400000FF3A000",
+  "version": "1.0.0",
+  "loop": true,
+  "volume": 0.8
+}
