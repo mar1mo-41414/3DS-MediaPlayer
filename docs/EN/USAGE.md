@@ -44,17 +44,19 @@ You cannot pick values above these limits (the 3DS CPU could not keep up).
 
 | preset | Resolution | fps | Video | Audio | Target |
 |---|---|---|---|---|---|
-| `light` | 320x192 (the ROM scales it to full screen) | 20 | 250 kbps | AAC 48 kbps / 32 kHz | Old 3DS, with headroom |
-| `medium` (default) | 360x216 (same) | 20 | 400 kbps | AAC 48 kbps / 32 kHz | Old 3DS, recommended |
-| `high` | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz | New 3DS |
-| `standard` | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz | New 3DS |
+| `light` | 320x192 (the ROM scales it to full screen) | 20 | 250 kbps | AAC 48 kbps / 32 kHz | Old 3DS, with headroom (verified on an Old 3DS) |
+| `medium` (default) | 360x216 (same) | 20 | 400 kbps | AAC 48 kbps / 32 kHz | Old 3DS, recommended (verified on an Old 3DS) |
+| `high` | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz | New 3DS (**untested on a New 3DS**; on an Old 3DS the audio can sound slightly stretched) |
+| `standard` | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz | New 3DS (**untested on a New 3DS**) |
 
 On a real Old 3DS `light` and `medium` are smooth. `high` plays, but decoding barely keeps up with real time and the
 audio can sound slightly stretched.
+No preset has been tested on a real New 3DS (it uses the extra application core for decoding, which has not been tried yet).
 
 ## CLI
 
 ```bash
+scripts/mkcia.sh --new MyMovie            # copy template/example to template/MyMovie (see below)
 scripts/mkcia.sh MyMovie                  # template/MyMovie -> out/<output>.cia
 scripts/mkcia.sh --list                   # list the templates under template/
 scripts/mkcia.sh MyMovie --preset light   # override meta.json's preset for this run
@@ -65,6 +67,9 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # a path works too (-o names the ou
 - Precedence: command line > meta.json > defaults.
 - If the argument is both a path and a template name, the one containing `meta.json` is used (the path if both do).
 - The default output directory is `out/`.
+- `--new NAME`: copies `template/example` to `template/NAME`, sets `title` to `NAME` and `title_id` to a valid value that does not
+  collide with other templates (the example's `long_title` and `output` are not carried over). The copy builds right away, so you can
+  replace the assets and `meta.json` step by step. It fails for a duplicate or invalid name, or if `template/example` is missing.
 - Options: `--elf` (ROM ELF), `--keep-work DIR` (keep intermediate files), `--no-compress` (skip compressing the ELF
   code: ~8 s faster, CIA ~0.7 MB larger; mostly for tests), `--debug` (print a traceback on unexpected errors).
 - Exit codes: `0` success / `1` a problem with the input that you can fix / `2` unexpected error / `130` interrupted.
@@ -101,7 +106,16 @@ scripts/mkcia-gui.sh          # Tkinter GUI (needs python3-tk; on Debian/Ubuntu:
 - The build runs in a worker thread with a progress bar and a log. "Cancel" stops the external commands (and leaves no
   temporary files). Command lines are hidden from the log unless "show commands" is ticked.
 
+## Controls (on the 3DS)
+
+- **START**: quit at any time and return to the HOME Menu.
+- With `loop` false, the video plays to the end, both screens fade out to black over about a second, and the app returns by itself.
+  With `true` it repeats until START.
+- The HOME button works as on any 3DS (the app does nothing special for it; resuming afterwards is untested).
+- There is no volume, pause or seek control.
+
 ## On a real console
 
 - Install the CIA with FBI or similar. A CFW console is assumed (the CIA is signed with makerom's default test key).
-- Audio uses ndsp, which needs the DSP firmware (`sdmc:/3ds/dspfirm.cdc`) on a real console. Without it only the video plays.
+- Audio uses ndsp, which needs the DSP firmware (`sdmc:/3ds/dspfirm.cdc`) on a real console. It is a standard file dumped during CFW
+  setup, so follow your CFW installation guide. Without it only the video plays (it does not fail).

@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -128,13 +129,11 @@ class RsfRealDeviceTest(unittest.TestCase):
             d = Path(d)
             for n in ("a.elf", "a.rsf", "r.bin", "i.smdh", "b.bnr"):
                 (d / n).write_bytes(b"x")
-            orig = cia.run
-            cia.run = lambda cmd, log=None, cwd=None: calls.append([str(c) for c in cmd]) or ""
-            try:
+            # 外部ツールが無い環境でも動くよう、ツールの探索も差し替える (実際には何も実行しない)
+            with mock.patch.object(cia, "find_tool", lambda name: name), \
+                 mock.patch.object(cia, "run", lambda cmd, log=None, cwd=None: calls.append([str(c) for c in cmd]) or ""):
                 cia.build_cia(d / "a.elf", d / "a.rsf", d / "r.bin", d / "i.smdh", d / "b.bnr",
                               parse_meta(GOOD), d / "o.cia")
-            finally:
-                cia.run = orig
         self.assertEqual(len(calls), 1)
         self.assertNotIn("-desc", calls[0])
         self.assertIn("-exefslogo", calls[0])

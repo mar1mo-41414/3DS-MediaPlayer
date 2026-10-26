@@ -37,7 +37,7 @@ ROM のソースとビルドスクリプトが本リポジトリにあるので�
 
 - **ffmpeg / ffprobe** on your PC (with libx264) — encodes your video. The encoded output is your own data.
 - **makerom** ([Project_CTR](https://github.com/3DSGuy/Project_CTR)), **bannertool**, **3dstool** — external tools.
-  `scripts/setup-tools.sh` builds bannertool and 3dstool from their upstream sources; check each project's license.
+  `scripts/setup-tools.sh` builds all three from their upstream sources (pinned revisions); check each project's license.
 - **Docker** image `devkitpro/devkitarm` — only needed to rebuild the ROM.
 
 ## Ideas and references / 参考にしたもの

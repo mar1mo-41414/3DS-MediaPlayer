@@ -8,6 +8,7 @@ from . import video
 from .errors import MkciaError
 from .pipeline import DEFAULT_ELF, BuildOptions, build_cia
 from .proc import OUT_ROOT, TEMPLATE_ROOT, Cancelled
+from .scaffold import create_from_example
 
 EXIT_OK = 0
 EXIT_USER_ERROR = 1  # 入力の不備など、ユーザーが直せるエラー
@@ -52,6 +53,8 @@ def main(argv=None) -> int:
     ap.add_argument("template", type=Path, nargs="?",
                     help=f"テンプレート名 ({TEMPLATE_ROOT}/ 配下) またはテンプレートディレクトリのパス")
     ap.add_argument("--list", action="store_true", help="使えるテンプレートの一覧を表示して終了")
+    ap.add_argument("--new", metavar="NAME", help=f"template/example をコピーして新しいテンプレート {TEMPLATE_ROOT}/NAME を作る "
+                    "(タイトルは NAME、タイトルIDは他と重ならない有効な値を自動で付ける)")
     ap.add_argument("-o", "--output", type=Path, help="出力 .cia のパス (指定すると meta.json の output / --output-dir より優先)")
     ap.add_argument("--output-dir", type=Path, help=f"出力先ディレクトリ (既定: {OUT_ROOT})")
     ap.add_argument("--preset", choices=sorted(video.PRESETS),
@@ -65,6 +68,18 @@ def main(argv=None) -> int:
     if args.list:
         names = list_templates()
         print("\n".join(names) if names else f"(テンプレートがありません: {TEMPLATE_ROOT})")
+        return EXIT_OK
+    if args.new is not None:
+        if args.template is not None:
+            ap.error("--new と、ビルドするテンプレートは同時に指定できません")
+        try:
+            dest = create_from_example(args.new, TEMPLATE_ROOT)
+        except MkciaError as e:
+            print(f"エラー: {e}", file=sys.stderr)
+            return EXIT_USER_ERROR
+        print(f"作成しました: {dest}\n"
+              "  雛形 (example) の素材が入っています。動画・画像・音声と meta.json を自分のものに差し替えてください。\n"
+              f"  ビルド: scripts/mkcia.sh {dest.name}")
         return EXIT_OK
     if args.template is None:
         ap.error("テンプレート名 (またはパス) を指定してください (--list で一覧)")

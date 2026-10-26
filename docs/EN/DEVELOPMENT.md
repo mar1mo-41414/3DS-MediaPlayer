@@ -19,10 +19,11 @@ docs/           documentation
 makerom, bannertool and 3dstool.
 
 ```bash
-scripts/setup-tools.sh        # builds bannertool and 3dstool into tools/bin/ (needs git, make, cmake, g++, libssl-dev)
+scripts/setup-tools.sh        # builds bannertool, 3dstool and makerom into tools/bin/ (needs git, make, cmake, g++, libssl-dev)
 ```
 
-Put `makerom` on `PATH`. External tools are searched in `MKCIA_TOOLS_DIR` → `tools/bin/` → `PATH`.
+The sources are pinned to known-good revisions (commits/tags). `makerom` is not built if one is already on `PATH` or in `tools/bin/`.
+External tools are searched in `MKCIA_TOOLS_DIR` → `tools/bin/` → `PATH`.
 
 ## Building the ROM
 
@@ -44,7 +45,7 @@ scripts/build-rom.sh EXTRA_CFLAGS=-DDEBUG_LOG   # debug build that writes mediap
 cd tool && python3 -m unittest discover -s tests
 ```
 
-About 350 tests, about 2 minutes. Tests that need the external tools and `prebuilt/mediaplayer.elf` are skipped automatically
+About 370 tests, about 2 minutes. Tests that need the external tools and `prebuilt/mediaplayer.elf` are skipped automatically
 when those are missing. The GUI tests need a display (`DISPLAY`) and are skipped without one (they also run under Xvfb).
 
 | File | Covers |
@@ -56,9 +57,25 @@ when those are missing. The GUI tests need a display (`DISPLAY`) and are skipped
 | `test_cli.py` / `test_resolution.py` | CLI exit codes, template-name resolution, preset/output precedence |
 | `test_cancel.py` | Cancelling external commands |
 | `test_gui_model.py` / `test_gui.py` | GUI logic / driving the real Tk window |
+| `test_scaffold.py` | Template scaffolding (`--new`): copying, avoiding title-ID collisions, leaving nothing behind on failure, builds right away |
 | `test_e2e.py` | Builds real CIAs (odd input formats, Japanese titles, leaving the output intact on failure, fps, aspect ratio) |
 
 The end-to-end tests are slow because makerom compresses the ELF code (about 8 s each); the tests skip it with `compress_code=False`.
+
+## CI (GitHub Actions)
+
+`.github/workflows/ci.yml`:
+
+- `unit`: runs the tests without any external tools on Python 3.9 / 3.12 / 3.13 (this guarantees that the tool-dependent tests are skipped, not failed).
+- `full`: on Ubuntu, sets up all the tools (`scripts/setup-tools.sh`) and a virtual display (xvfb), runs every test, and builds a CIA from
+  `template/example`. The resulting `Example.cia` is kept as an artifact.
+- `release`: when a `v*` tag is pushed, attaches `Example.cia` to the Release (creating it if needed).
+
+```bash
+git tag v1.0.0 && git push github v1.0.0     # Example.cia gets attached to the Release
+```
+
+The workflow can be checked with `actionlint`, and the steps of `full` can be reproduced in a clean Docker container (ubuntu:24.04).
 
 ## Checking on an emulator
 

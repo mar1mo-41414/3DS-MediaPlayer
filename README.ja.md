@@ -13,14 +13,15 @@
 ## 動作確認状況
 
 - 旧 3DS の実機で、映像・音声・タイトル音・フェードアウトまで確認済み (`medium` まで滑らか)。
-- New 3DS の実機は未確認。
+- **New 3DS の実機は未確認** (`high` / `standard` プリセットと、追加コアでのデコードは New 3DS では未検証)。
 - 生成ツールは Linux で開発・テスト (Python 3.12)。
 
 ## 必要なもの
 
 - Python 3 (3.12 で開発・テスト。tkinter は GUI にだけ必要)
-- `ffmpeg` / `ffprobe` (libx264 と aac 付き)、[`makerom`](https://github.com/3DSGuy/Project_CTR)
-- `bannertool` / `3dstool` (`scripts/setup-tools.sh` でソースからビルドできる。要 git, make, cmake, g++, libssl-dev)
+- `ffmpeg` / `ffprobe` (libx264 と aac 付き。多くのディストリビューションの標準の ffmpeg でよい)
+- `bannertool` / `3dstool` / [`makerom`](https://github.com/3DSGuy/Project_CTR) (`scripts/setup-tools.sh` で、動作確認した版をソースからビルドして `tools/bin/` に置く。
+  要 git, make, cmake, g++, libssl-dev。`makerom` が PATH 上にあればビルドしない)
 - 実機で音声を鳴らすには、自分の 3DS から吸い出した DSP ファームウェア (`sdmc:/3ds/dspfirm.cdc`)。無ければ映像だけ再生する。
 
 ROM 本体は `prebuilt/mediaplayer.elf` が入っているので、ビルドし直さない限り Docker や devkitPro は不要。
@@ -28,12 +29,17 @@ ROM 本体は `prebuilt/mediaplayer.elf` が入っているので、ビルドし
 ## クイックスタート
 
 ```bash
-scripts/setup-tools.sh                  # bannertool / 3dstool を tools/bin/ に用意 (初回のみ)
-mkdir -p template/MyMovie               # テンプレートを作る (下記)
-cp -r template/example/* template/MyMovie/   # 例をコピーして、中身を自分のものに差し替える
+scripts/setup-tools.sh                  # bannertool / 3dstool / makerom を tools/bin/ に用意 (初回のみ)
+scripts/mkcia.sh example                # まず同梱のサンプルをそのままビルド → out/Example.cia
+scripts/mkcia.sh --new MyMovie          # サンプルをコピーして自分のテンプレート template/MyMovie を作る
+                                        #   (タイトル = MyMovie、タイトルID は重ならない有効な値を自動で付ける)
+#  → template/MyMovie の動画・画像・音声と meta.json を自分のものに差し替える
 scripts/mkcia.sh MyMovie                # → out/<output>.cia
 scripts/mkcia-gui.sh                    # GUI で同じことをする (要: python3-tk)
 ```
+
+ビルド済みのサンプル (`Example.cia`) は [Releases](https://github.com/mar1mo-41414/3DS-MediaPlayer/releases) にあるので、
+ツールを用意する前に、まず実機で動くか試せる。
 
 ### テンプレート
 
@@ -63,9 +69,24 @@ scripts/mkcia-gui.sh                    # GUI で同じことをする (要: pyt
 ```
 
 - `title_id` は `000400000xxxxx00` 形式 (`x` は 16 進 5 桁)。アプリごとに変える (同じ ID の CIA は上書きし合う)。
-- `preset` は画質と軽さの選択。旧 3DS は `medium` (既定) か `light`、New 3DS は `high` / `standard` も使える。
+- `preset` は画質と軽さの選択。旧 3DS は `medium` (既定) か `light`。`high` / `standard` は New 3DS 向けだが、**New 3DS では未検証**。
 
 キーの一覧、プリセット、CLI のオプション、エラーの扱いは [docs/JA/USAGE.md](docs/JA/USAGE.md) を参照。
+
+## 操作方法 (3DS 側)
+
+- ホームメニューから起動すると、すぐ再生が始まる。
+- **START**: 再生中いつでも終了してホームメニューに戻る。
+- ループしない動画 (`"loop": false`) は、最後まで再生すると、上下画面が約 1 秒で黒くフェードアウトして、自動でホームメニューに戻る。
+- ループする動画 (`"loop": true`) は、START を押すまで繰り返す。
+- HOME ボタンは通常の 3DS と同じようにホームメニューを開ける (アプリ側では特別な処理をしていない。中断後の再開の挙動は未検証)。
+- 音量・一時停止・シークの操作は無い (音量は `meta.json` の `volume` で決める)。
+
+## 音が出ないとき
+
+実機で音声を鳴らすには、**DSP ファームウェア** (`sdmc:/3ds/dspfirm.cdc`) が SD カードに必要。これは CFW を導入するときに
+ダンプしておく標準的なファイルなので、お使いの CFW の導入手順 (例: [3DS Hacks Guide](https://3ds.hacks.guide/)) を参照すること。
+無い場合、このアプリは映像だけを再生する (エラーにはならない)。
 
 ## ドキュメント
 

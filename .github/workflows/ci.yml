@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # 外部ツール (ffmpeg / makerom など) が無い環境でも、テストが落ちずに正しくスキップされること。
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.9', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests (no external tools)
+        working-directory: tool
+        run: python -m unittest discover -s tests
+
+  # ツール一式と仮想ディスプレイをそろえて、全テストと、サンプルの CIA の生成まで行う。
+  full:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg git make cmake g++ libssl-dev xvfb python3-tk
+          ffmpeg -hide_banner -encoders 2>/dev/null | grep -E ' (libx264|aac) ' 
+      - name: Cache tools
+        uses: actions/cache@v4
+        with:
+          path: tools/bin
+          key: tools-${{ hashFiles('scripts/setup-tools.sh') }}
+      - name: Build bannertool / 3dstool / makerom
+        run: scripts/setup-tools.sh
+      - name: Full tests (with a virtual display for the GUI tests)
+        working-directory: tool
+        run: xvfb-run -a python3 -m unittest discover -s tests
+      - name: Build the bundled sample
+        run: scripts/mkcia.sh example
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Example.cia
+          path: out/Example.cia
+          if-no-files-found: error
+
+  # v* のタグを push したとき、サンプルの CIA を Release に添付する。
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [unit, full]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Example.cia
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" Example.cia --clobber --repo "$REPO"
+          else
+            gh release create "$TAG" Example.cia --repo "$REPO" --title "$TAG" \
+              --notes "Prebuilt sample (\`Example.cia\`), built by CI from \`template/example\`. Install it with FBI or similar to check that playback works on your console (CFW required; sound needs the DSP firmware)."
+          fi

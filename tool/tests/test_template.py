@@ -134,8 +134,8 @@ class TemplateStructureTest(unittest.TestCase):
         self.assertEqual(check_template(d).banner.name, "banner.png")
 
     def test_paths_with_spaces_and_unicode(self):
-        d = make_template(self.root / "ツイン クル ナイト")
-        self.assertEqual(check_template(d).root.name, "ツイン クル ナイト")
+        d = make_template(self.root / "日本語 の 名前")
+        self.assertEqual(check_template(d).root.name, "日本語 の 名前")
 
     def test_trailing_slash_and_relative(self):
         d = make_template(self.root / "t")

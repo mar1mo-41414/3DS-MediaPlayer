@@ -70,10 +70,13 @@ class RunCancelTest(unittest.TestCase):
 
     def test_cancel_is_not_turned_into_a_misleading_message(self):
         """validate / video が MkciaError を言い換える箇所でも Cancelled はそのまま伝わる。"""
-        with mock.patch.object(validate, "run", side_effect=Cancelled("中止しました")):
+        # ツールの探索も差し替えて、外部ツールが無い環境でも動くようにする
+        with mock.patch.object(validate, "find_tool", lambda name: name), \
+             mock.patch.object(validate, "run", side_effect=Cancelled("中止しました")):
             with self.assertRaises(Cancelled):
                 validate.validate_audio(Path(__file__))
-        with mock.patch.object(video, "run", side_effect=Cancelled("中止しました")):
+        with mock.patch.object(video, "find_tool", lambda name: name), \
+             mock.patch.object(video, "run", side_effect=Cancelled("中止しました")):
             with self.assertRaises(Cancelled):
                 video.encode_video(Path(__file__), Path("/tmp/x.mp4"), "light",
                                    info=validate.VideoInfo(10, 10, 5.0, 10, True))

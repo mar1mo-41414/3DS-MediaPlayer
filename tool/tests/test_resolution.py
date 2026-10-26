@@ -28,7 +28,7 @@ def good(**kw):
 class MetaOutputNameTest(unittest.TestCase):
     def test_cia_suffix_is_added(self):
         for given, want in (("Movie", "Movie.cia"), ("Movie.cia", "Movie.cia"), ("Movie.CIA", "Movie.CIA"),
-                            ("a.b.c", "a.b.c.cia"), ("Twinkle-Night", "Twinkle-Night.cia"), ("日本語の映画", "日本語の映画.cia"),
+                            ("a.b.c", "a.b.c.cia"), ("My-Movie", "My-Movie.cia"), ("日本語の映画", "日本語の映画.cia"),
                             ("with space", "with space.cia"), ("movie.cia.cia", "movie.cia.cia"), ("x.cia ", "x.cia")):
             with self.subTest(given=given):
                 self.assertEqual(parse_meta(good(output=given)).output, want)
@@ -205,9 +205,9 @@ class ResolutionE2ETest(unittest.TestCase):
                 self.build(t, output_dir=self.d / "o")
 
     def test_output_dir_is_created_and_name_with_unicode(self):
-        t = make_template(self.d / "tpl", {"output": "ツイン クル ナイト"})
+        t = make_template(self.d / "tpl", {"output": "日本語 の 名前"})
         out = self.build(t, output_dir=self.d / "new" / "dir", preset="light")
-        self.assertEqual(out.name, "ツイン クル ナイト.cia")
+        self.assertEqual(out.name, "日本語 の 名前.cia")
         self.assertTrue(out.is_file())
 
     def test_output_dir_that_is_a_file(self):

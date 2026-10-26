@@ -43,16 +43,18 @@ template/<名前>/
 
 | preset | 解像度 | fps | 映像 | 音声 | 目安 |
 |---|---|---|---|---|---|
-| `light` | 320x192 (ROM が全画面に拡大) | 20 | 250 kbps | AAC 48 kbps / 32 kHz | 旧3DS向け。余裕あり |
-| `medium` (既定) | 360x216 (同上) | 20 | 400 kbps | AAC 48 kbps / 32 kHz | 旧3DS推奨 |
-| `high` | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz | New 3DS向け |
-| `standard` | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz | New 3DS向け |
+| `light` | 320x192 (ROM が全画面に拡大) | 20 | 250 kbps | AAC 48 kbps / 32 kHz | 旧3DS向け。余裕あり (旧3DS実機で確認済み) |
+| `medium` (既定) | 360x216 (同上) | 20 | 400 kbps | AAC 48 kbps / 32 kHz | 旧3DS推奨 (旧3DS実機で確認済み) |
+| `high` | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz | New 3DS向け (**New 3DS では未検証**。旧3DSでは音声が少し間延びする) |
+| `standard` | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz | New 3DS向け (**New 3DS では未検証**) |
 
 旧3DS の実機では `light` と `medium` が滑らか。`high` は再生できるがデコードが再生速度ぎりぎりで、音声が少し間延びすることがある。
+New 3DS の実機では、どのプリセットも未検証 (New 3DS ではアプリ用の追加コアでデコードする経路が使われるが、まだ試していない)。
 
 ## CLI
 
 ```bash
+scripts/mkcia.sh --new MyMovie            # template/example をコピーして template/MyMovie を作る (下記)
 scripts/mkcia.sh MyMovie                  # template/MyMovie → out/<output>.cia
 scripts/mkcia.sh --list                   # template/ 配下のテンプレート一覧
 scripts/mkcia.sh MyMovie --preset light   # meta.json の preset を一時的に上書き
@@ -63,6 +65,9 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # パスでも指定できる (-o �
 - 設定の優先順位は「コマンドライン引数 > meta.json > 既定」。
 - テンプレートがパスとしても名前としても見つかる場合は、`meta.json` のある方 (同じならパス) を使う。
 - 出力先の既定は `out/`。
+- `--new NAME`: `template/example` を `template/NAME` にコピーして、`title` を `NAME`、`title_id` を他のテンプレートと重ならない
+  有効な値にする (雛形の `long_title` と `output` は引き継がない)。コピーした時点でそのままビルドでき、素材と `meta.json` を
+  自分のものに差し替えていける。同じ名前や使えない名前、`template/example` が無い場合はエラー。
 - オプション: `--elf` (ROM 本体の ELF)、`--keep-work DIR` (中間生成物を残す)、`--no-compress` (ELF コードの圧縮を省いて約 8 秒速い。
   CIA が約 0.7MB 大きくなる。主にテスト用)、`--debug` (想定外のエラー時にトレースバックを表示)。
 - 終了コード: `0` 成功 / `1` 入力などユーザーが直せるエラー / `2` 想定外のエラー / `130` 中断。
@@ -96,7 +101,15 @@ scripts/mkcia-gui.sh          # Tkinter の GUI (要: python3-tk。Debian/Ubuntu
 - ビルドは別スレッドで動き、進捗バーとログが出る。「中止」で外部コマンドを止められる (一時ファイルも残さない)。
   外部コマンドの行はログに出さない (「コマンドも表示」で表示)。
 
+## 操作 (3DS 側)
+
+- **START**: 再生中いつでも終了してホームメニューに戻る。
+- `loop` が `false` なら、最後まで再生した後、上下画面が約 1 秒で黒くフェードアウトして自動で戻る。`true` なら START まで繰り返す。
+- HOME ボタンは通常の 3DS と同じ (アプリ側では特別な処理をしていない。中断後の再開は未検証)。
+- 音量・一時停止・シークの操作は無い。
+
 ## 実機での注意
 
 - インストールした CIA は FBI などで入れる。CFW 環境が前提 (署名は makerom の既定のテスト鍵)。
-- 音声は ndsp を使うため、実機では DSP ファームウェア (`sdmc:/3ds/dspfirm.cdc`) が必要。無い場合は映像だけ再生する。
+- 音声は ndsp を使うため、実機では DSP ファームウェア (`sdmc:/3ds/dspfirm.cdc`) が必要。CFW の導入手順でダンプする標準的なファイルなので、
+  お使いの CFW の導入手順を参照すること。無い場合は映像だけ再生する (エラーにはならない)。

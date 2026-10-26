@@ -136,7 +136,7 @@ class SuccessTest(E2EBase):
 
     def test_paths_with_spaces_unicode_and_relative(self):
         t = make_template(self.d / "動画 テンプレート (1)")
-        out = self.d / "出力 先" / "ツイン クル.cia"
+        out = self.d / "出力 先" / "日本語 名前.cia"
         self.assertValidCia(self.build(t, out))
         cwd = os.getcwd()
         try:

@@ -86,7 +86,7 @@ class FormTest(unittest.TestCase):
 
 class TitleIdTest(unittest.TestCase):
     def test_suggested_id_is_valid_and_deterministic(self):
-        for name in ("a", "Twinkle_Night", "日本語", "x" * 100, "with space"):
+        for name in ("a", "My_Movie", "日本語", "x" * 100, "with space"):
             with self.subTest(name=name):
                 tid = g.suggest_title_id(name)
                 self.assertEqual(parse_meta(dict(GOOD_META, title_id=tid)).title_id, tid)
@@ -106,7 +106,7 @@ class TitleIdTest(unittest.TestCase):
 
 class TemplateNameTest(unittest.TestCase):
     def test_valid(self):
-        for n in ("Twinkle_Night", "ツイン クル", "a-b.c", " padded ", "123", "A" * 100):
+        for n in ("My_Movie", "日本語 名前", "a-b.c", " padded ", "123", "A" * 100):
             with self.subTest(n=n):
                 self.assertEqual(g.check_template_name(n), n.strip())
 
@@ -303,7 +303,7 @@ class AssetTest(unittest.TestCase):
         self.assertEqual(self.t.set_asset("icon", up).name, "icon.png")
 
     def test_names_with_spaces_and_unicode(self):
-        p = make_video(self.src / "ツイン クル 夜 (1).mp4")
+        p = make_video(self.src / "日本語 の 夜 (1).mp4")
         self.assertEqual(self.t.set_asset("video", p).name, "video.mp4")
 
     def test_same_file_is_a_noop(self):

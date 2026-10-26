@@ -19,10 +19,11 @@ docs/           ドキュメント
 makerom、bannertool、3dstool。
 
 ```bash
-scripts/setup-tools.sh        # tools/bin/ に bannertool, 3dstool をビルド (要 git, make, cmake, g++, libssl-dev)
+scripts/setup-tools.sh        # tools/bin/ に bannertool, 3dstool, makerom をビルド (要 git, make, cmake, g++, libssl-dev)
 ```
 
-`makerom` は PATH 上に置く。外部ツールは `MKCIA_TOOLS_DIR` → `tools/bin/` → `PATH` の順に探す。
+ソースは動作確認した版 (コミット/タグ) に固定してある。`makerom` は PATH 上や `tools/bin/` に既にあればビルドしない。
+外部ツールは `MKCIA_TOOLS_DIR` → `tools/bin/` → `PATH` の順に探す。
 
 ## ROM 本体のビルド
 
@@ -44,7 +45,7 @@ scripts/build-rom.sh EXTRA_CFLAGS=-DDEBUG_LOG   # SD カードに mediaplayer.lo
 cd tool && python3 -m unittest discover -s tests
 ```
 
-約 350 件、約 2 分。外部ツールと `prebuilt/mediaplayer.elf` が無い環境では、それを使うテストは自動でスキップされる。
+約 370 件、約 2 分。外部ツールと `prebuilt/mediaplayer.elf` が無い環境では、それを使うテストは自動でスキップされる。
 GUI のテストは画面 (`DISPLAY`) が必要で、無ければスキップされる (Xvfb 上でも動く)。
 
 | ファイル | 内容 |
@@ -56,9 +57,25 @@ GUI のテストは画面 (`DISPLAY`) が必要で、無ければスキップさ
 | `test_cli.py` / `test_resolution.py` | CLI の終了コード、テンプレート名の解決、preset/出力名の優先順位 |
 | `test_cancel.py` | 外部コマンドの中止 |
 | `test_gui_model.py` / `test_gui.py` | GUI のロジック層 / Tk を実際に動かす操作テスト |
+| `test_scaffold.py` | 雛形生成 (`--new`): コピー・タイトルID の重複回避・失敗時に何も残さない・そのままビルドできる |
 | `test_e2e.py` | 実際に CIA を作る通しテスト (形式違いの入力、日本語タイトル、失敗時に出力を壊さない、fps・縦横比) |
 
 通しテストが遅いのは makerom の ELF コード圧縮 (1 回約 8 秒) のため。テストでは `compress_code=False` で省く。
+
+## CI (GitHub Actions)
+
+`.github/workflows/ci.yml`:
+
+- `unit`: 外部ツール無し・Python 3.9 / 3.12 / 3.13 でテストを回す (ツールが無い環境でテストがスキップされ、落ちないことの保証)。
+- `full`: Ubuntu でツール一式 (`scripts/setup-tools.sh`) と仮想ディスプレイ (xvfb) をそろえ、全テストと、`template/example` からの CIA の生成まで行う。
+  生成した `Example.cia` は成果物 (artifact) として残る。
+- `release`: `v*` のタグを push したとき、`Example.cia` を Release に添付する (Release が無ければ作る)。
+
+```bash
+git tag v1.0.0 && git push github v1.0.0     # Release に Example.cia が付く
+```
+
+ワークフローは `actionlint` で検証でき、`full` と同じ手順はクリーンな Docker コンテナ (ubuntu:24.04) でも再現できる。
 
 ## エミュレータでの確認
 

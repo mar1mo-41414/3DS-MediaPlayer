@@ -151,12 +151,12 @@ class TemplateResolutionTest(unittest.TestCase):
         return d
 
     def test_bare_name_resolves_under_template_root(self):
-        d = self.mk(self.troot, "Twinkle_Night")
-        self.assertEqual(cli.resolve_template(Path("Twinkle_Night")), d)
+        d = self.mk(self.troot, "My_Movie")
+        self.assertEqual(cli.resolve_template(Path("My_Movie")), d)
 
     def test_name_with_spaces_and_unicode(self):
-        d = self.mk(self.troot, "ツイン クル 夜")
-        self.assertEqual(cli.resolve_template(Path("ツイン クル 夜")), d)
+        d = self.mk(self.troot, "日本語 の 夜")
+        self.assertEqual(cli.resolve_template(Path("日本語 の 夜")), d)
 
     def test_existing_path_is_used_as_is(self):
         d = self.mk(self.root, "elsewhere")

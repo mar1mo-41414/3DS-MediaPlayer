@@ -151,7 +151,7 @@ class OutputCheckTest(unittest.TestCase):
         check_output(out, [self.inp])
 
     def test_unicode_and_spaces(self):
-        check_output(self.d / "ツイン クル" / "夜 の 出力.cia", [self.inp])
+        check_output(self.d / "日本語 名前" / "夜 の 出力.cia", [self.inp])
 
 
 class ToolsCheckTest(unittest.TestCase):
@@ -168,12 +168,10 @@ class ToolsCheckTest(unittest.TestCase):
         self.assertIn("setup-tools.sh", m)
 
     def test_only_some_missing(self):
-        real = validate.find_tool
-
-        def fake_find(name):
+        def fake_find(name):  # 実際のツールの有無に依存しない: makerom と 3dstool だけが無い状況を作る
             if name in ("makerom", "3dstool"):
                 raise MkciaError("x")
-            return real(name) if name not in ("makerom", "3dstool") else None
+            return f"/fake/{name}"
 
         with mock.patch.object(validate, "find_tool", fake_find):
             with self.assertRaises(MkciaError) as cm:
