@@ -6,6 +6,7 @@
 - **ROM 本体** (`rom/`): 上画面で動画再生 (H.264 + AAC)、下画面は静止画 1 枚。
   devkitARM + libctru + citro2d/citro3d、ffmpeg (最小構成・自前クロスビルド)、Y2R、ndsp。
   音声の再生位置を基準に映像を同期 (遅れたらフレームスキップ、進みすぎたら待機)。
+  ループ再生でない動画は、最後まで再生し終えると上下画面を約 1 秒かけて黒くフェードアウトしてホームに戻る。
   テンプレートが変わっても ROM 本体は共通 (romfs 内の決まったファイル名を読むだけ)。
 - **生成ツール** (`tool/`): Python 3 (標準ライブラリのみ) の CLI。処理ごとに関数を分離
   (`mkcia.video` / `assets` / `banner` / `romfs` / `cia`) してあり、GUI から同じ関数を呼べる。
@@ -24,10 +25,11 @@ scripts/setup-tools.sh        # tools/bin/ に bannertool, 3dstool をビルド 
 `makerom` は PATH 上に置く (<https://github.com/3DSGuy/Project_CTR>)。外部ツールは
 `MKCIA_TOOLS_DIR` → `tools/bin/` → `PATH` の順に探す。
 
-テンプレートディレクトリを用意する (サンプル: `examples/template/`):
+テンプレートディレクトリを `template/<名前>/` に置く (サンプル: `template/example/`。
+`template/` 配下は `example` 以外コミット対象外):
 
 ```
-template/
+template/<名前>/
 ├── video.mp4          元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコード。mkv/mov/avi/webm/m4v も可)
 ├── icon.png           ホームメニューのアイコン (48x48 に自動リサイズ。jpg/bmp/webp/gif も可)
 ├── bottom.png         下画面に表示する静止画 (320x240 に自動リサイズ。同上)
@@ -50,13 +52,21 @@ template/
 | `product_code` | | `CTR-P-XXXX` (既定 `CTR-P-MPLY`) |
 | `loop` | | ループ再生 (既定 `false`) |
 | `volume` | | 音量 0.0〜1.0 (既定 `1.0`) |
+| `preset` | | エンコードプリセット名 (下表。既定 `medium`) |
+| `output` | | 出力ファイル名 (`.cia` は省略可。ディレクトリや `<>:"/\|?*` は不可。既定は `<テンプレート名>.cia`) |
 
-生成:
+生成 (テンプレート名を指定すると `template/<名前>/` を使い、`out/<output>.cia` に出力する):
 
 ```bash
-scripts/mkcia.sh path/to/template -o out.cia
-scripts/mkcia.sh path/to/template -o out.cia --preset light
+scripts/mkcia.sh Twinkle_Night                  # template/Twinkle_Night → out/Twinkle-Night.cia
+scripts/mkcia.sh --list                         # template/ 配下のテンプレート一覧
+scripts/mkcia.sh Twinkle_Night --preset light   # meta.json の preset を一時的に上書き
+scripts/mkcia.sh Twinkle_Night --output-dir ~/ダウンロード
+scripts/mkcia.sh path/to/dir -o /tmp/x.cia      # パスでも指定できる (-o は出力ファイルを直接指定)
 ```
+
+設定の優先順位は「コマンドライン引数 > meta.json > 既定」。テンプレートがパスとしても名前としても
+見つかる場合は、`meta.json` のある方 (同じならパス) を使う。
 
 エンコードプリセット (ユーザーが上限を超える値は指定できない):
 

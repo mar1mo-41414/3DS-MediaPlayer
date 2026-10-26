@@ -8,18 +8,20 @@ import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from .errors import MkciaError
 
 REQUIRED = ("title", "title_id", "version", "publisher")
-KNOWN_KEYS = REQUIRED + ("long_title", "product_code", "loop", "volume")
+KNOWN_KEYS = REQUIRED + ("long_title", "product_code", "loop", "volume", "preset", "output")
 
 # SMDH の文字数上限 (UTF-16 コード単位): short title 64 / long title 128 / publisher 64
 MAX_TITLE = 64
 MAX_LONG_TITLE = 128
 MAX_PUBLISHER = 64
 MAX_META_BYTES = 1_000_000
+MAX_OUTPUT_NAME_BYTES = 200
+_BAD_FILENAME_CHARS = set('<>:"/\\|?*')  # SD カード (FAT) に置けない文字 + パス区切り
 
 _TID_RE = re.compile(r"^[0-9A-Fa-f]{16}$")
 _VER_RE = re.compile(r"^([0-9]+)\.([0-9]+)\.([0-9]+)$")  # \d は全角・アラビア数字も通すので ASCII のみ
@@ -36,6 +38,8 @@ class Meta:
     product_code: str
     loop: bool
     volume: float
+    preset: Optional[str] = None  # エンコードプリセット名 (None なら既定)。名前の妥当性は pipeline で確認
+    output: Optional[str] = None  # 出力ファイル名 (必ず .cia で終わる。None ならテンプレート名)
     warnings: List[str] = field(default_factory=list)  # 未知のキーなど。エラーではないが知らせたいこと
 
     @property
@@ -72,6 +76,33 @@ def _check_text(key: str, text: str, max_units: int) -> None:
         raise MkciaError(f"meta.json の {key} に不正な文字が含まれています: {text!r}") from e
     if units > max_units:
         raise MkciaError(f"meta.json の {key} が長すぎます ({units} 文字。{max_units} 文字以内にしてください)")
+
+
+def _check_output_name(name: str) -> str:
+    """出力ファイル名を検証して返す (.cia が無ければ付ける)。ディレクトリを指す名前は許さない。"""
+    if not name:
+        raise MkciaError("meta.json の output が空です (出力ファイル名を指定してください)")
+    if name in (".", "..") or any(ord(c) < 32 or ord(c) == 127 for c in name):
+        raise MkciaError(f"meta.json の output が不正なファイル名です: {name!r}")
+    bad = sorted(c for c in set(name) if c in _BAD_FILENAME_CHARS)
+    if bad:
+        raise MkciaError(
+            f"meta.json の output にファイル名に使えない文字があります: {' '.join(bad)}"
+            " (ディレクトリは指定できません。出力先は --output-dir / -o で指定します)"
+        )
+    if name.endswith("."):
+        raise MkciaError(f"meta.json の output が '.' で終わっています: {name!r}")
+    if not name.lower().endswith(".cia"):
+        name += ".cia"
+    try:
+        too_long = len(name.encode("utf-8")) > MAX_OUTPUT_NAME_BYTES
+    except UnicodeEncodeError as e:
+        raise MkciaError(f"meta.json の output に不正な文字が含まれています: {name!r}") from e
+    if too_long:
+        raise MkciaError(f"meta.json の output が長すぎます ({MAX_OUTPUT_NAME_BYTES} バイト以内にしてください)")
+    if name.lower() == ".cia":
+        raise MkciaError("meta.json の output にファイル名がありません (拡張子だけです)")
+    return name
 
 
 def parse_meta(data) -> Meta:
@@ -137,6 +168,9 @@ def parse_meta(data) -> Meta:
     if not math.isfinite(volume) or not 0.0 <= volume <= 1.0:
         raise MkciaError(f"meta.json の volume は 0.0〜1.0 で指定してください: {volume}")
 
+    preset = _get_str(data, "preset", False) or None
+    output = _check_output_name(_get_str(data, "output", False)) if data.get("output") is not None else None
+
     warnings = [f"meta.json の未知のキーは無視します: {k}" for k in data if k not in KNOWN_KEYS]
     return Meta(
         title=title,
@@ -147,6 +181,8 @@ def parse_meta(data) -> Meta:
         product_code=product,
         loop=loop,
         volume=volume,
+        preset=preset,
+        output=output,
         warnings=warnings,
     )
 

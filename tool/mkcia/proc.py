@@ -12,6 +12,8 @@ Log = Callable[[str], None]
 
 # <repo>/tool/mkcia/proc.py -> <repo>
 REPO_ROOT = Path(__file__).resolve().parents[2]
+TEMPLATE_ROOT = REPO_ROOT / "template"  # テンプレートディレクトリ置き場 (名前だけで指定できる)
+OUT_ROOT = REPO_ROOT / "out"  # 生成した CIA の既定の出力先
 
 
 def _search_dirs():

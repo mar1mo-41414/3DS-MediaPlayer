@@ -10,3 +10,6 @@ deps/
 !prebuilt/mediaplayer.elf
 rom/*.smdh
 rom/*.map
+template/*
+!template/example/
+out/

@@ -2,10 +2,12 @@ import argparse
 import sys
 import traceback
 from pathlib import Path
+from typing import List
 
 from . import video
 from .errors import MkciaError
 from .pipeline import DEFAULT_ELF, BuildOptions, build_cia
+from .proc import OUT_ROOT, TEMPLATE_ROOT
 
 EXIT_OK = 0
 EXIT_USER_ERROR = 1  # 入力の不備など、ユーザーが直せるエラー
@@ -13,29 +15,65 @@ EXIT_INTERNAL = 2  # 想定外の例外 (バグ)
 EXIT_INTERRUPTED = 130
 
 
+def list_templates() -> List[str]:
+    """template/ 配下のテンプレート (meta.json があるディレクトリ) の名前一覧。"""
+    if not TEMPLATE_ROOT.is_dir():
+        return []
+    return sorted(p.name for p in TEMPLATE_ROOT.iterdir() if (p / "meta.json").exists())
+
+
+def resolve_template(arg: Path) -> Path:
+    """テンプレートの指定を解決する。パスとして存在すればそれ、無ければ template/<名前>。
+
+    どちらも meta.json を持つディレクトリなら、パス指定を優先する。
+    """
+    cands = [arg]
+    if not arg.is_absolute():
+        cands.append(TEMPLATE_ROOT / arg)
+    for c in cands:  # meta.json があるものを優先
+        if (c / "meta.json").exists():
+            return c
+    for c in cands:  # 無ければ、存在するものを (具体的なエラーが出るように)
+        if c.exists():
+            return c
+    avail = list_templates()
+    hint = ("\n  使えるテンプレート: " + ", ".join(avail)) if avail else ""
+    raise MkciaError(
+        f"テンプレートが見つかりません: {arg}\n  (パスとしても {TEMPLATE_ROOT / arg} としても存在しません){hint}"
+    )
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         prog="mkcia",
         description="テンプレートディレクトリ (video.mp4 / icon.png / bottom.png / select_sound.(wav|mp3|ogg|flac|m4a) / meta.json) から"
-        " 3DS 動画再生用の .cia を生成する",
+        " 3DS 動画再生用の .cia を生成する。プリセットと出力名は meta.json の preset / output に書ける",
     )
-    ap.add_argument("template", type=Path, help="テンプレートディレクトリ")
-    ap.add_argument("-o", "--output", type=Path, help="出力 .cia (既定: <template>/../<ディレクトリ名>.cia)")
-    ap.add_argument("--preset", choices=sorted(video.PRESETS), default=video.DEFAULT_PRESET, help="エンコードプリセット")
+    ap.add_argument("template", type=Path, nargs="?",
+                    help=f"テンプレート名 ({TEMPLATE_ROOT}/ 配下) またはテンプレートディレクトリのパス")
+    ap.add_argument("--list", action="store_true", help="使えるテンプレートの一覧を表示して終了")
+    ap.add_argument("-o", "--output", type=Path, help="出力 .cia のパス (指定すると meta.json の output / --output-dir より優先)")
+    ap.add_argument("--output-dir", type=Path, help=f"出力先ディレクトリ (既定: {OUT_ROOT})")
+    ap.add_argument("--preset", choices=sorted(video.PRESETS),
+                    help=f"エンコードプリセット (meta.json の preset より優先。どちらも無ければ {video.DEFAULT_PRESET})")
     ap.add_argument("--elf", type=Path, default=DEFAULT_ELF, help="ROM 本体の ELF")
     ap.add_argument("--keep-work", type=Path, metavar="DIR", help="中間生成物を DIR に残す")
     ap.add_argument("--no-compress", action="store_true", help="ELF コードの圧縮を省いて速く作る (主にテスト用。CIA が約 0.7MB 大きくなる)")
     ap.add_argument("--debug", action="store_true", help="想定外のエラー時にトレースバックを表示する")
     args = ap.parse_args(argv)
 
-    tpl = args.template
-    # 末尾スラッシュや "." / ".." でも名前が取れるように解決してから既定の出力名を決める
-    tpl_resolved = tpl.resolve()
-    out = args.output or tpl_resolved.parent / f"{tpl_resolved.name or 'output'}.cia"
+    if args.list:
+        names = list_templates()
+        print("\n".join(names) if names else f"(テンプレートがありません: {TEMPLATE_ROOT})")
+        return EXIT_OK
+    if args.template is None:
+        ap.error("テンプレート名 (またはパス) を指定してください (--list で一覧)")
+
     try:
+        tpl = resolve_template(args.template)
         build_cia(
-            BuildOptions(tpl, out, preset=args.preset, elf=args.elf, keep_work=args.keep_work,
-                         compress_code=not args.no_compress),
+            BuildOptions(tpl, args.output, preset=args.preset, output_dir=args.output_dir, elf=args.elf,
+                         keep_work=args.keep_work, compress_code=not args.no_compress),
             log=lambda m: print(m, flush=True),
         )
     except MkciaError as e:

@@ -76,6 +76,14 @@ class SuccessTest(E2EBase):
         self.assertValidCia(packed)
         self.assertLess(packed.stat().st_size, plain.stat().st_size)
 
+    def test_output_permissions_follow_umask(self):
+        old = os.umask(0o022)
+        try:
+            out = self.build(make_template(self.d / "t"))
+        finally:
+            os.umask(old)
+        self.assertEqual(out.stat().st_mode & 0o777, 0o644)
+
     def test_basic_build(self):
         out = self.build(make_template(self.d / "t"))
         self.assertTrue(out.is_file())

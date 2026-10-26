@@ -4,6 +4,8 @@
   "publisher": "mediaplayer",
   "title_id": "000400000FF3A000",
   "version": "1.0.0",
-  "loop": true,
-  "volume": 0.8
+  "loop": false,
+  "volume": 0.8,
+  "preset": "medium",
+  "output": "Example"
 }

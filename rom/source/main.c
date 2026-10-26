@@ -26,6 +26,7 @@
 #define TEX_W 512
 #define TEX_H 256
 
+#define FADE_FRAMES 60 // 終了時のフェードアウト (60fps で約 1 秒)
 #define VQ_SIZE 12  // デコード済み映像フレームのキュー長
 #define ABUF_NUM 48 // ndsp に積む波形バッファ数
 #define ABUF_SAMPLES 4096
@@ -116,6 +117,10 @@ static void config_load(Config *cfg)
 
 // ---------------------------------------------------------------- bottom screen
 
+// 下画面に表示した BGR8 画像の複製 (終了時のフェードアウト用)。
+#define BOTTOM_BYTES (240 * 320 * 3)
+static u8 *bottom_copy;
+
 // bottom.png を 320x240 に最近傍で拡縮して下画面フレームバッファへ直接書く。
 // (下画面は citro3d のターゲットに繋がないので生の BGR8 フレームバッファを使える)
 static void bottom_show(const char *path)
@@ -177,8 +182,24 @@ static void bottom_show(const char *path)
     }
     free(rows);
     free(pix);
+    bottom_copy = malloc(BOTTOM_BYTES);
+    if (bottom_copy)
+        memcpy(bottom_copy, fb, BOTTOM_BYTES);
     gfxFlushBuffers();
     gfxSwapBuffers();
+}
+
+// 下画面の画像を brightness (0=黒 .. 255=そのまま) に暗くして書き戻す。
+static void bottom_set_brightness(u32 brightness)
+{
+    if (!bottom_copy)
+        return;
+    u16 fw, fh;
+    u8 *fb = gfxGetFramebuffer(GFX_BOTTOM, GFX_LEFT, &fw, &fh);
+    for (int i = 0; i < BOTTOM_BYTES; i++)
+        fb[i] = (u8)((bottom_copy[i] * brightness) >> 8);
+    gfxFlushBuffers();
+    gfxScreenSwapBuffers(GFX_BOTTOM, false);
 }
 
 // ---------------------------------------------------------------- player state
@@ -503,6 +524,19 @@ static double audio_clock(void)
     return last;
 }
 
+// 積んだ音声バッファが全て再生し終わった (キューにも再生中にも残りがない)。
+// 最後のバッファが終わると audio_clock() は進まなくなり、総再生時間に届かないことがあるため、
+// 終了判定にはこれも使う。
+static bool audio_idle(void)
+{
+    for (int i = 0; i < ABUF_NUM; i++) {
+        u8 st = P.ab[i].wb.status;
+        if (st == NDSP_WBUF_QUEUED || st == NDSP_WBUF_PLAYING)
+            return false;
+    }
+    return true;
+}
+
 // ---------------------------------------------------------------- main
 
 int main(void)
@@ -620,6 +654,7 @@ int main(void)
     const float dw = vw * scale, dh = vh * scale;
 
     bool first = true;
+    bool finished = false; // 最後まで再生し終えた (START で抜けた場合は false)
     while (aptMainLoop()) {
         hidScanInput();
         if (hidKeysDown() & KEY_START)
@@ -680,8 +715,10 @@ int main(void)
             av_frame_free(&show);
         } else if (!first) {
             // 新しいフレームがなければ描画も省いて vsync を待つだけ
-            if (P.eof && remain == 0 && clock >= P.end_time)
+            if (P.eof && remain == 0 && (clock >= P.end_time || (have_audio && audio_idle()))) {
+                finished = true;
                 break;
+            }
             gspWaitForVBlank();
             continue;
         }
@@ -697,6 +734,23 @@ int main(void)
     P.quit = true;
     threadJoin(th, U64_MAX);
     threadFree(th);
+
+    // ループ再生でない動画が最後まで終わったら、上下画面を約 1 秒かけて黒くフェードアウトしてから戻る。
+    // 上画面は最後のフレームの上に黒を重ね、下画面は画像の明るさを下げる。
+    if (finished) {
+        dbg("fade start");
+        for (int i = 1; i <= FADE_FRAMES && aptMainLoop(); i++) {
+            const u32 a = (u32)i * 255 / FADE_FRAMES; // 黒の不透明度 0..255
+            C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+            C2D_TargetClear(top, C2D_Color32(0, 0, 0, 255));
+            C2D_SceneBegin(top);
+            C2D_DrawImageAt(img, (TOP_W - dw) / 2, (TOP_H - dh) / 2, 0.0f, NULL, scale, scale);
+            C2D_DrawRectSolid(0, 0, 0.5f, TOP_W, TOP_H, C2D_Color32(0, 0, 0, a));
+            C3D_FrameEnd(0);
+            bottom_set_brightness(255 - a);
+        }
+        dbg("fade end");
+    }
 
     if (have_audio) {
         ndspChnReset(0);
