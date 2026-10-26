@@ -245,7 +245,7 @@
   `--new` で作るテンプレートは最初からそれで。
 - それまでは、無いと 0.1 秒の無音だった。→ 既定の音に変更。権利の問題を避けるため、他人の素材ではなく ffmpeg の `aevalsrc` で
   **自分で合成した 2 音のチャイム** (E5 → A5、減衰、約 0.7 秒、32kHz モノラル、ピーク約 −3dB) を `tool/mkcia/default_select_sound.wav`
-  として同梱 (`scripts/make-default-sound.sh` で再生成できる)。実機で聞いた評価はまだ (波形の数値だけ確認)。
+  として同梱 (`scripts/make-default-sound.sh` で再生成できる)。実機 (旧3DS) のホームメニューで、アイコンを選んだときに正しく鳴ることを確認済み。
 - 「無い = 無音」でなくなったので、無音にしたい人は無音の `select_sound.wav` を置く (ドキュメントに明記)。壊れた `select_sound.*` は
   黙って既定に差し替えず、エラー (icon と同じ方針)。
 - `--new` は雛形の `select_sound.*` を引き継がない (`select_sound_notes.txt` のような似た名前は対象外)。`template/example` からも
