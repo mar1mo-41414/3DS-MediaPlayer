@@ -140,5 +140,20 @@ class SoundLookupTest(unittest.TestCase):
             self.assertEqual(_find_sound(d).name, "select_sound.wav")
 
 
+class PresetTest(unittest.TestCase):
+    def test_presets_satisfy_rom_constraints(self):
+        """ROM は幅・高さが 8 の倍数で 512x256 以下の動画だけを受け付ける。"""
+        from mkcia.video import PRESETS
+
+        self.assertIn("light", PRESETS)
+        for name, p in PRESETS.items():
+            self.assertEqual(p.width % 8, 0, name)
+            self.assertEqual(p.height % 8, 0, name)
+            self.assertLessEqual(p.width, 512, name)
+            self.assertLessEqual(p.height, 256, name)
+            self.assertLessEqual(p.width, 400, name)  # 上画面より大きくする意味が無い
+            self.assertGreater(p.fps, 0, name)
+
+
 if __name__ == "__main__":
     unittest.main()

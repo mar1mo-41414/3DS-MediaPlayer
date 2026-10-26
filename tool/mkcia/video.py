@@ -20,11 +20,17 @@ class VideoPreset:
     video_kbps: int
     audio_kbps: int
     audio_rate: int
+    deblock: bool = False  # True: ストリームのデブロッキングを有効に (ROM 側も config の deblock で有効化)
 
 
 PRESETS = {
     # 旧3DS向け: 低解像度でデコードして ROM 側で全画面に拡大 (5:3 のまま)
     "light": VideoPreset(width=320, height=192, fps=20, video_kbps=250, audio_kbps=48, audio_rate=32000),
+    # 旧3DS向けの中間: ビットレートを上げて画質を改善 (旧3DS・実機で light が滑らかだったのを基準に、
+    # エミュレータ上のデコード時間が light 比 +5% / +13% のもの。デブロッキングは負荷に見合わず無効)
+    "medium": VideoPreset(width=360, height=216, fps=20, video_kbps=400, audio_kbps=48, audio_rate=32000),
+    "high": VideoPreset(width=400, height=240, fps=20, video_kbps=400, audio_kbps=48, audio_rate=32000),
+    # New 3DS 向け
     "standard": VideoPreset(width=400, height=240, fps=24, video_kbps=350, audio_kbps=64, audio_rate=32000),
 }
 DEFAULT_PRESET = "standard"
@@ -72,7 +78,7 @@ def encode_video(
         "-maxrate", f"{p.video_kbps * 3 // 2}k", "-bufsize", f"{p.video_kbps * 3}k",
         "-refs", "1", "-bf", "0", "-g", str(fps * 2),
         # ROM 側はデブロッキングを省いて軽くするので、エンコード側でも無効にしてドリフトを防ぐ
-        "-x264-params", "no-deblock=1:cabac=0:weightp=0",
+        "-x264-params", ("" if p.deblock else "no-deblock=1:") + "cabac=0:weightp=0",
     ]
     if info["has_audio"]:
         cmd += [

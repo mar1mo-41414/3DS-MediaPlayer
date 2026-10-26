@@ -62,6 +62,8 @@ scripts/mkcia.sh path/to/template -o out.cia --preset light
 |---|---|---|---|---|
 | `standard` (既定) | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz |
 | `light` | 320x192 (ROM が全画面に拡大) | 20 | 250 kbps | AAC 48 kbps / 32 kHz |
+| `medium` | 360x216 (同上) | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
+| `high` | 400x240 | 20 | 400 kbps | AAC 48 kbps / 32 kHz |
 
 テスト: `cd tool && python3 -m unittest discover -s tests`
 

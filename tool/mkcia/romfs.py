@@ -14,14 +14,14 @@ ROMFS_CONFIG = "config.json"
 
 
 def stage_romfs(
-    romfs_dir: Path, video_mp4: Path, bottom_png: Path, loop: bool, volume: float
+    romfs_dir: Path, video_mp4: Path, bottom_png: Path, loop: bool, volume: float, deblock: bool = False
 ) -> Path:
     """romfs_dir に ROM 本体が読む 3 ファイルを配置する。"""
     romfs_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(video_mp4, romfs_dir / ROMFS_VIDEO)
     shutil.copyfile(bottom_png, romfs_dir / ROMFS_BOTTOM)
     (romfs_dir / ROMFS_CONFIG).write_text(
-        json.dumps({"loop": bool(loop), "volume": round(float(volume), 3)}) + "\n", encoding="utf-8"
+        json.dumps({"loop": bool(loop), "volume": round(float(volume), 3), "deblock": bool(deblock)}) + "\n", encoding="utf-8"
     )
     return romfs_dir
 

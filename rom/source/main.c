@@ -61,6 +61,7 @@ u32 __stacksize__ = 0x40000;
 typedef struct {
     bool loop;
     float volume;
+    bool deblock; // true: H.264 のデブロッキングフィルタを使う (画質↑ / デコード負荷↑)
 } Config;
 
 // 平坦な {"key": value} だけを想定した最小スキャナ。
@@ -84,8 +85,14 @@ static void config_load(Config *cfg)
 {
     cfg->loop = false;
     cfg->volume = 1.0f;
+    cfg->deblock = false;
 
-    FILE *f = fopen(ROMFS_CONFIG, "rb");
+    FILE *f = NULL;
+#ifdef DEBUG_LOG
+    f = fopen("sdmc:/test_config.json", "rb"); // 測定用の差し替え
+#endif
+    if (!f)
+        f = fopen(ROMFS_CONFIG, "rb");
     if (!f)
         return;
     char buf[1024];
@@ -96,6 +103,8 @@ static void config_load(Config *cfg)
     const char *v;
     if ((v = json_find(buf, "loop")))
         cfg->loop = (strncmp(v, "true", 4) == 0) || (*v == '1');
+    if ((v = json_find(buf, "deblock")))
+        cfg->deblock = (strncmp(v, "true", 4) == 0) || (*v == '1');
     if ((v = json_find(buf, "volume"))) {
         cfg->volume = (float)atof(v);
         if (cfg->volume < 0.0f)
@@ -383,7 +392,16 @@ static bool open_media(void)
     av_log_set_level(AV_LOG_DEBUG);
     av_log_set_callback(av_log_cb);
 #endif
-    int r = avformat_open_input(&P.fmt, ROMFS_VIDEO, NULL, NULL);
+    const char *video_path = ROMFS_VIDEO;
+#ifdef DEBUG_LOG
+    // 測定用: sdmc:/test_video.mp4 があればそれを再生する (romfs を作り直さず設定を比較できる)
+    FILE *ov = fopen("sdmc:/test_video.mp4", "rb");
+    if (ov) {
+        fclose(ov);
+        video_path = "file:sdmc:/test_video.mp4";
+    }
+#endif
+    int r = avformat_open_input(&P.fmt, video_path, NULL, NULL);
     dbg("open_input r=%d", r);
     if (r < 0)
         return false;
@@ -402,7 +420,8 @@ static bool open_media(void)
     P.vctx = avcodec_alloc_context3(vc);
     avcodec_parameters_to_context(P.vctx, vs->codecpar);
     P.vctx->thread_count = 1;
-    P.vctx->skip_loop_filter = AVDISCARD_ALL; // デブロッキングを省いて軽くする
+    if (!P.cfg.deblock)
+        P.vctx->skip_loop_filter = AVDISCARD_ALL; // エンコード側もデブロック無しのストリーム前提で、省いて軽くする
     if (avcodec_open2(P.vctx, vc, NULL) < 0)
         return false;
     dbg("vcodec open ok %dx%d", P.vctx->width, P.vctx->height);

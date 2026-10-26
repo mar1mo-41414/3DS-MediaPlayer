@@ -87,7 +87,8 @@ def build_cia(opt: BuildOptions, log: Optional[Log] = None) -> Path:
         # 4. romfs
         log("[4/6] romfs 構築")
         bottom = assets.make_bottom_image(src_bottom, work / "bottom320.png", log)
-        romfs_dir = romfs.stage_romfs(work / "romfs", enc, bottom, meta.loop, meta.volume)
+        romfs_dir = romfs.stage_romfs(work / "romfs", enc, bottom, meta.loop, meta.volume,
+                                        video.PRESETS[opt.preset].deblock)
         romfs_bin = romfs.build_romfs_bin(romfs_dir, work / "romfs.bin", log)
 
         # 5. RSF
