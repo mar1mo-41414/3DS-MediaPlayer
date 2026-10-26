@@ -150,6 +150,24 @@ class SuccessTest(E2EBase):
             os.chdir(cwd)
         self.assertTrue((self.d / "rel" / "out.cia").is_file())
 
+    def test_makerom_never_writes_into_the_output_folder(self):
+        """makerom は Windows でパスをシステムのコードページで扱う。日本語の出力名・出力先に直接書かせず、作業ディレクトリに作ってからコピーする。"""
+        from mkcia import cia
+
+        seen = []
+        real = cia.build_cia
+
+        def spy(elf, rsf, romfs_bin, smdh, bnr, meta, dst, log=None):
+            seen.append(Path(dst))
+            return real(elf, rsf, romfs_bin, smdh, bnr, meta, dst, log)
+
+        out = self.d / "出力 先" / "日本語 名前.cia"
+        with mock.patch.object(cia, "build_cia", spy):
+            self.assertValidCia(self.build(make_template(self.d / "t"), out))
+        self.assertEqual(len(seen), 1)
+        self.assertNotEqual(seen[0].parent, out.parent)
+        self.assertNoLeftovers(out.parent)
+
     @skip_no_symlink
     def test_symlinked_inputs(self):
         t = make_template(self.d / "t", skip=("video.mp4", "icon.png"))

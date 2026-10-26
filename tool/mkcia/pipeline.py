@@ -169,14 +169,18 @@ def build_cia(opt: BuildOptions, log: Optional[Log] = None) -> Path:
             out.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             raise MkciaError(f"出力先ディレクトリを作れません: {out.parent} ({e.strerror})") from e
+        # makerom は Windows ではパスをシステムのコードページで扱うため、出力名や出力先に日本語などがあると書けないことがある。
+        # そこで ASCII の作業ディレクトリに作り、Python (Unicode 対応) で出力先にコピーしてから置き換える。
+        built = work / "app.cia"
+        cia.build_cia(Path(opt.elf), rsf, romfs_bin, smdh, bnr, meta, built, log)
+        if not built.is_file() or built.stat().st_size == 0:
+            raise MkciaError("CIA の生成結果が空です")
         try:
             tmp_out = create_tmp_file(out.parent, prefix=f".{out.stem}-", suffix=".cia.tmp")
+            shutil.copyfile(built, tmp_out)
+            os.replace(tmp_out, out)
         except OSError as e:
-            raise MkciaError(f"出力先に一時ファイルを作れません: {out.parent} ({e.strerror})") from e
-        cia.build_cia(Path(opt.elf), rsf, romfs_bin, smdh, bnr, meta, tmp_out, log)
-        if not tmp_out.is_file() or tmp_out.stat().st_size == 0:
-            raise MkciaError("CIA の生成結果が空です")
-        os.replace(tmp_out, out)
+            raise MkciaError(f"出力先に書き込めません: {out} ({e.strerror})") from e
         tmp_out = None
         log(f"完了: {out} ({out.stat().st_size / 1024 / 1024:.1f} MiB)")
         return out

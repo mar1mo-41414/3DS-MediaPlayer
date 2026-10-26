@@ -158,7 +158,10 @@ scripts\mkcia-gui.cmd
 - `setup-tools.ps1` fetches released binaries of known-good versions (`ffmpeg` is skipped if it is already on `PATH`; the essentials build of
   [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) includes libx264 and aac). To use tools you already have, put them on `PATH` or in
   a directory named by `MKCIA_TOOLS_DIR`.
-- Paths with Japanese or spaces work. Output files get normal permissions inherited from the folder.
+- Spaces and non-ASCII characters in the template name, output name and output folder are fine (`makerom` never writes to the output folder;
+  the CIA is built in a work folder and copied). `makerom` and the other tools read their *input* paths in the system code page, though,
+  so keep this repository (and `%TEMP%`) in a folder whose name the code page can represent — plain ASCII is safest.
+  Output files get normal permissions inherited from the folder.
 - Not available on Windows: the shell scripts for building the ROM (`build-rom.sh` and friends, which need Docker/devkitPro and are only
   for developing the ROM itself).
 

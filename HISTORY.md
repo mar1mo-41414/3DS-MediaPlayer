@@ -268,6 +268,11 @@
     (cp932) 依存もテスト側にあった。
   - ssh 越しの (デスクトップに繋がっていない) セッションでは Tk にフォーカスが渡らず、`<Control-s>` のテストだけ落ちる。
     その場合はスキップにした。デスクトップ側 (スケジュールタスクで対話セッションへ起動) では GUI テスト 56 件が全て通る。
+  - **makerom は Windows で、出力先のパスをシステムのコードページで扱う**。日本語ロケールの VM では通ったが、GitHub の windows ランナー
+    (英語ロケール) の CI で「出力名/出力先に日本語」の 2 テストが `Failed to create ...` で落ちて発覚 (ローカルの VM だけでは見逃した)。
+    → CIA は ASCII の作業ディレクトリ (`app.cia`) に作り、Python (Unicode 対応) で出力先の一時ファイルへコピー → `os.replace`。
+    回帰テストは makerom に渡る出力先が出力フォルダでないことを見る (直書きに戻すと落ちることをミューテーションで確認)。
+    入力側 (リポジトリや `%TEMP%` のパス) は makerom の仕様でどうにもならないのでドキュメントに明記した。
 - 追加: `scripts/setup-tools.ps1` (配布 exe を `tools\bin` に取得)、`scripts/mkcia.cmd` / `mkcia-gui.cmd` (ラッパー)、`.gitattributes`
   (`.cmd` / `.ps1` は CRLF)、CI の `windows` ジョブ。`.ps1` は PowerShell 5.1 が BOM 無し UTF-8 を ANSI として読むので BOM 付きにした。
 - 画面のスクリーンショットは、VM のデスクトップセッションが切断状態で `CopyFromScreen` が失敗したため撮れていない (GUI の起動と生存、
