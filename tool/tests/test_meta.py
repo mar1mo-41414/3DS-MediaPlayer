@@ -127,5 +127,18 @@ class RsfRealDeviceTest(unittest.TestCase):
         self.assertIn("-exefslogo", calls[0])
 
 
+class SoundLookupTest(unittest.TestCase):
+    def test_find_sound_by_extension(self):
+        from mkcia.pipeline import _find_sound
+
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            self.assertIsNone(_find_sound(d))
+            (d / "select_sound.mp3").write_bytes(b"x")
+            self.assertEqual(_find_sound(d).name, "select_sound.mp3")
+            (d / "select_sound.wav").write_bytes(b"x")  # wav が優先
+            self.assertEqual(_find_sound(d).name, "select_sound.wav")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -31,7 +31,7 @@ template/
 ├── video.mp4          元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコード)
 ├── icon.png           ホームメニューのアイコン (48x48 に自動リサイズ)
 ├── bottom.png         下画面に表示する静止画 (320x240 に自動リサイズ)
-├── select_sound.wav   アイコン選択音 (省略可。3 秒を超える分は切り捨て)
+├── select_sound.wav   アイコン選択音 (省略可。mp3/ogg/flac/m4a も可。先頭 3 秒を使い末尾をフェードアウト)
 ├── banner.png         バナー画像 (省略可。省略時は icon.png から生成)
 └── meta.json
 ```

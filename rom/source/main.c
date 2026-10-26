@@ -559,13 +559,11 @@ int main(void)
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
     bool n3ds = false;
     APT_CheckNew3DS(&n3ds);
-    int core = 1;
-    if (n3ds)
-        core = 2;
-    else
-        // 旧3DSはシステムコア(1)の一部を借りる。システムモジュール(FS/SD など)が動くコアなので、
-        // 取りすぎると「SD card was removed」になり得る。標準的な 30% に留める。
-        APT_SetAppCpuTimeLimit(30);
+    // New 3DS はアプリ用の追加コア (2)。旧3DS はシステムコア(1)だと CPU 時間の 30% までしか
+    // 使えず (これ以上は FS/SD などのシステムモジュールを圧迫する) デコードが間に合わないので、
+    // アプリコア(0)で動かす。メインスレッドはほぼ待機なので、デコードが優先度の低いスレッドとして
+    // 残りの CPU を使い、描画・入力が必要なときだけメインが割り込む。
+    const int core = n3ds ? 2 : 0;
     // デコードは本体 (メイン) より低い優先度で動かし、描画・入力を妨げない
     Thread th = threadCreate(decode_thread, NULL, 256 * 1024, prio + 1, core, false);
     dbg("n3ds=%d core=%d thread=%p prio=%ld", (int)n3ds, core, (void *)th, (long)prio);

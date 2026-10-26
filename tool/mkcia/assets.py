@@ -35,9 +35,18 @@ def make_bottom_image(src: Path, dst: Path, log: Optional[Log] = None) -> Path:
     return _fit(src, dst, 320, 240, "black", log)
 
 
+BANNER_AUDIO_MAX_SEC = 3
+BANNER_AUDIO_FADE_SEC = 0.3
+
+
 def make_banner_audio(src: Optional[Path], dst: Path, log: Optional[Log] = None) -> Path:
-    """アイコン選択音 (16bit PCM WAV, 最大 3 秒)。src が無ければ無音。"""
-    common = ["-t", "3", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", dst]
+    """アイコン選択音 (16bit PCM WAV, 最大 3 秒)。src が無ければ無音。
+
+    src は ffmpeg が読める音声ならよい (wav / mp3 / ogg / flac ...)。3 秒を超える分は切り捨て、
+    切り口のプチ音を避けるため末尾にフェードアウトを掛ける。
+    """
+    fade = f"afade=t=out:st={BANNER_AUDIO_MAX_SEC - BANNER_AUDIO_FADE_SEC}:d={BANNER_AUDIO_FADE_SEC}"
+    common = ["-t", str(BANNER_AUDIO_MAX_SEC), "-af", fade, "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", dst]
     if src is None:
         _ffmpeg(["-f", "lavfi", "-i", "anullsrc=r=32000:cl=stereo", "-t", "0.1", "-c:a", "pcm_s16le", dst], log)
     else:

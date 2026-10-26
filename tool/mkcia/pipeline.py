@@ -23,6 +23,18 @@ class BuildOptions:
     keep_work: Optional[Path] = None  # 指定すると中間生成物をそのディレクトリに残す
 
 
+SOUND_EXTS = (".wav", ".mp3", ".ogg", ".flac", ".m4a", ".aac")
+
+
+def _find_sound(template: Path) -> Optional[Path]:
+    """select_sound.<拡張子> (wav / mp3 / ogg / flac / m4a / aac) を探す。無ければ None (= 無音)。"""
+    for ext in SOUND_EXTS:
+        p = template / f"select_sound{ext}"
+        if p.is_file():
+            return p
+    return None
+
+
 def _need(template: Path, name: str, required: bool = True) -> Optional[Path]:
     p = template / name
     if p.is_file():
@@ -49,7 +61,7 @@ def build_cia(opt: BuildOptions, log: Optional[Log] = None) -> Path:
     src_video = _need(tpl, "video.mp4")
     src_icon = _need(tpl, "icon.png")
     src_bottom = _need(tpl, "bottom.png")
-    src_sound = _need(tpl, "select_sound.wav", required=False)
+    src_sound = _find_sound(tpl)
     src_banner = _need(tpl, "banner.png", required=False)
 
     work_ctx = None

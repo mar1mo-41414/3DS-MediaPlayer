@@ -10,7 +10,7 @@ from .pipeline import DEFAULT_ELF, BuildOptions, build_cia
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         prog="mkcia",
-        description="テンプレートディレクトリ (video.mp4 / icon.png / bottom.png / select_sound.wav / meta.json) から"
+        description="テンプレートディレクトリ (video.mp4 / icon.png / bottom.png / select_sound.(wav|mp3|ogg|flac|m4a) / meta.json) から"
         " 3DS 動画再生用の .cia を生成する",
     )
     ap.add_argument("template", type=Path, help="テンプレートディレクトリ")
