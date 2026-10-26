@@ -109,7 +109,23 @@ class TitleIdTest(unittest.TestCase):
 
     def test_unique_id_range(self):
         self.assertEqual(parse_meta(good(title_id="0004000000000000")).unique_id, 0)
-        self.assertEqual(parse_meta(good(title_id="00040000FFFFFF00")).unique_id, 0xFFFFFF)
+        self.assertEqual(parse_meta(good(title_id="000400000FFFFF00")).unique_id, 0xFFFFF)  # makerom の上限
+
+    def test_unique_id_above_makerom_limit_is_rejected_with_a_suggestion(self):
+        """ユニークID は 20bit まで (実測: 0x100000 以上は makerom が "Unique ID is out of range")。"""
+        for v in ("0004000010000000", "0004000011451400", "00040000FFFFFF00", "00040000FFFFF100"):
+            with self.subTest(v=v), self.assertRaises(MkciaError) as cm:
+                parse_meta(good(title_id=v))
+            m = str(cm.exception)
+            self.assertIn("範囲外", m)
+            self.assertIn("000400000FFFFF00", m)
+            near = m.split("例: ")[1].split(":")[0]
+            self.assertEqual(parse_meta(good(title_id=near)).title_id, near)  # 提案は有効
+
+    def test_boundary_just_below_and_above(self):
+        parse_meta(good(title_id="000400000FFFFF00"))
+        with self.assertRaises(MkciaError):
+            parse_meta(good(title_id="0004000010000000"))
 
 
 class VersionTest(unittest.TestCase):

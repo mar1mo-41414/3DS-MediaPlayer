@@ -115,7 +115,7 @@ class App:
         ttk.Entry(idbar, textvariable=self.vars["title_id"]).grid(row=0, column=0, sticky="ew")
         ttk.Button(idbar, text="自動", width=5, command=self.on_auto_title_id).grid(row=0, column=1, padx=(PAD, 0))
         entry(2, 1, "バージョン *", "version")
-        self._id_hint = "* は必須。タイトルIDは 00040000xxxxxx00 形式。バージョンは 1.0.0 のように。製品コードは空欄可 (CTR-P-XXXX)"
+        self._id_hint = "* は必須。タイトルIDは 000400000xxxxx00 形式 (x は16進5桁)。バージョンは 1.0.0 のように。製品コードは空欄可 (CTR-P-XXXX)"
         self.id_warn = ttk.Label(meta, text=self._id_hint, style="Hint.TLabel")
         self.id_warn.grid(row=3, column=0, columnspan=4, sticky="w")
 

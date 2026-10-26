@@ -150,7 +150,7 @@ class TemplateFlowTest(GuiTestBase):
         self.assertEqual(self.app.template.name, "My Movie")
         self.assertTrue((self.troot / "My Movie" / "meta.json").exists())
         self.assertEqual(self.app.vars["title"].get(), "My Movie")
-        self.assertRegex(self.app.vars["title_id"].get(), r"^00040000[0-9A-F]{6}00$")
+        self.assertRegex(self.app.vars["title_id"].get(), r"^000400000[0-9A-F]{5}00$")
         self.assertIn("My Movie", self.app.tpl_box.cget("values"))
         self.assertEqual(self.app.asset_status["video"].get().split(" ")[0], "未設定")
 
@@ -178,7 +178,7 @@ class TemplateFlowTest(GuiTestBase):
 
     def test_live_validation_messages(self):
         self.open_named(self.full_template())
-        cases = [("title", "", "title"), ("title_id", "123", "title_id"), ("version", "x", "version"),
+        cases = [("title", "", "title"), ("title_id", "123", "title_id"), ("title_id", "0004000011451400", "範囲外"), ("version", "x", "version"),
                  ("product_code", "bad", "product_code"), ("output", "a/b", "output")]
         for key, bad, frag in cases:
             old = self.app.vars[key].get()

@@ -23,6 +23,7 @@ MAX_META_BYTES = 1_000_000
 MAX_OUTPUT_NAME_BYTES = 200
 _BAD_FILENAME_CHARS = set('<>:"/\\|?*')  # SD カード (FAT) に置けない文字 + パス区切り
 
+MAX_UNIQUE_ID = 0xFFFFF  # makerom が受け付けるユニークID (title_id の bits 8..27) の上限 (20bit)
 _TID_RE = re.compile(r"^[0-9A-Fa-f]{16}$")
 _VER_RE = re.compile(r"^([0-9]+)\.([0-9]+)\.([0-9]+)$")  # \d は全角・アラビア数字も通すので ASCII のみ
 _PRODUCT_RE = re.compile(r"^CTR-[A-Z]-[A-Z0-9]{4}$")
@@ -132,8 +133,15 @@ def parse_meta(data) -> Meta:
         raise MkciaError(f"title_id は 16 桁の 16 進数で指定してください: {raw_tid!r}")
     if not tid.startswith("00040000") or not tid.endswith("00"):
         raise MkciaError(
-            "title_id は 00040000xxxxxx00 形式 (アプリ用) にしてください"
+            "title_id は 000400000xxxxx00 形式 (アプリ用。x は 16 進 5 桁) にしてください"
             f" (例: 000400000FF3A000): {tid}"
+        )
+    unique = int(tid[8:], 16) >> 8
+    if unique > MAX_UNIQUE_ID:  # makerom の上限。超えると最後の CIA 化で初めて失敗していた
+        near = f"00040000{(unique & MAX_UNIQUE_ID) << 8:08X}"
+        raise MkciaError(
+            f"title_id のユニークID部分 ({tid[8:14]}) が範囲外です。使えるのは 0004000000000000 〜 000400000FFFFF00 "
+            f"(000400000xxxxx00 の x は 16 進 5 桁) です。例: {near}: {tid}"
         )
 
     raw_ver = data["version"]
