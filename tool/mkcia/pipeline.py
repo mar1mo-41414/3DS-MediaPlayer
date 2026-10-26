@@ -144,6 +144,8 @@ def build_cia(opt: BuildOptions, log: Optional[Log] = None) -> Path:
         icon = (assets.make_icon(generated, work / "icon48.png", log, crop_square=True) if files.icon is None
                 else assets.make_icon(files.icon, work / "icon48.png", log))
         banner_png = assets.make_banner_image(files.banner or files.icon or generated, work / "banner.png", log)
+        if files.sound is None:
+            log("select_sound が無いので、既定のタイトル選択音を使います")
         wav = assets.make_banner_audio(files.sound, work / "banner.wav", log)
         smdh = banner.make_smdh(icon, work / "app.smdh", meta.title, meta.long_title, meta.publisher, log)
         bnr = banner.make_banner(banner_png, wav, work / "app.bnr", log)

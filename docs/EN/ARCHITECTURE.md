@@ -59,7 +59,7 @@ Plain-stdlib Python. Each step is an independent function; the CLI and the GUI c
 | `meta.py` | Reading and validating `meta.json` (types, lengths, ranges) |
 | `video.py` | Presets and the ffmpeg pre-encode |
 | `extract.py` | When `icon` / `bottom` are missing: makes the source image from the video's embedded image, else a frame at a given second |
-| `assets.py` | Icon (48x48), banner (256x128), bottom image (320x240) and banner sound (WAV, ≤ 3 s) |
+| `assets.py` | Icon (48x48), banner (256x128), bottom image (320x240) and banner sound (WAV, ≤ 3 s; the default chime if absent) |
 | `banner.py` | SMDH / banner via bannertool |
 | `romfs.py` | Staging the romfs directory and `romfs.bin` via 3dstool |
 | `cia.py` | Generating the RSF and building the CIA with makerom |

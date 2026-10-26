@@ -327,6 +327,8 @@ class TemplateDir:
                 return "未設定 (必須)"
             if stem in ("icon", "bottom"):
                 return "未設定 (ビルド時に動画から作る)"
+            if stem == "select_sound":
+                return "未設定 (既定のタイトル選択音を使う)"
             return "未設定"
         try:
             return f"{p.name} — " + describe_file(ASSET_BY_STEM[stem].kind, p)

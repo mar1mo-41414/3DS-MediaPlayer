@@ -92,7 +92,8 @@ def main(argv=None) -> int:
             print(f"エラー: {e}", file=sys.stderr)
             return EXIT_USER_ERROR
         print(f"作成しました: {dest}\n"
-              "  雛形 (example) の素材が入っています。動画・画像・音声と meta.json を自分のものに差し替えてください。\n"
+              "  雛形 (example) の動画と画像が入っています。自分のものに差し替えて、meta.json を編集してください。\n"
+              "  (icon / bottom は無くても動画から作れます。タイトル選択音は既定の音で、独自の音にするなら select_sound.* を置きます)\n"
               f"  ビルド: scripts/mkcia.sh {dest.name}")
         return EXIT_OK
     if args.template is None:

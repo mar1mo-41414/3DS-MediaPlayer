@@ -443,7 +443,7 @@ class FormFrameAtTest(unittest.TestCase):
             t = g.TemplateDir.create("x", Path(d))
             self.assertIn("動画から", t.describe_asset("icon"))
             self.assertIn("動画から", t.describe_asset("bottom"))
-            self.assertEqual(t.describe_asset("select_sound"), "未設定")
+            self.assertIn("既定", t.describe_asset("select_sound"))  # 無ければ既定の音を使う
 
 
 if __name__ == "__main__":

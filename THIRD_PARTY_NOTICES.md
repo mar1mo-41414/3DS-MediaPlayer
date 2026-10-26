@@ -48,7 +48,8 @@ ROM のソースとビルドスクリプトが本リポジトリにあるので�
 ## Sample data / サンプルデータ
 
 `template/example/` and `rom/romfs/` contain only synthetic test patterns generated with FFmpeg's `lavfi`
-sources (no third-party content).
+sources (no third-party content). The default title-select sound (`tool/mkcia/default_select_sound.wav`) is a chime synthesised
+from sine waves by `scripts/make-default-sound.sh` (no third-party audio); it is covered by this project's MIT license.
 
 ## Not distributed / 同梱しないもの
 

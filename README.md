@@ -33,7 +33,7 @@ The ROM is shipped prebuilt as `prebuilt/mediaplayer.elf`, so Docker/devkitPro a
 scripts/setup-tools.sh                  # build bannertool / 3dstool / makerom into tools/bin/ (once)
 scripts/mkcia.sh example                # first, build the bundled sample as it is -> out/Example.cia
 scripts/mkcia.sh --new MyMovie          # copy the sample into your own template, template/MyMovie
-                                        #   (title = MyMovie, with a valid, non-colliding title ID)
+                                        #   (title = MyMovie, with a valid, non-colliding title ID; the default select sound)
 #  -> replace the video, images, sound and meta.json in template/MyMovie with yours
 scripts/mkcia.sh MyMovie                # -> out/<output>.cia
 scripts/mkcia-gui.sh                    # the same thing in a GUI (needs python3-tk)
@@ -51,7 +51,7 @@ Put these files in `template/<name>/` (example: `template/example/`).
 | `video.mp4` | Source video (any format/resolution; the tool re-encodes it for the 3DS) |
 | `icon.png` | HOME Menu icon (optional; made from the video if absent) |
 | `bottom.png` | Still image shown on the bottom screen (optional; made from the video if absent) |
-| `select_sound.wav` | Sound played when the icon is selected (optional; mp3 etc. also work) |
+| `select_sound.wav` | Sound played when the icon is selected (optional; the default sound is used if absent; mp3 etc. also work) |
 | `meta.json` | Title, publisher, title ID, version, ... |
 
 Example `meta.json`:

@@ -57,6 +57,7 @@ when those are missing. The GUI tests need a display (`DISPLAY`) and are skipped
 | `test_cli.py` / `test_resolution.py` | CLI exit codes, template-name resolution, preset/output precedence |
 | `test_cancel.py` | Cancelling external commands |
 | `test_gui_model.py` / `test_gui.py` | GUI logic / driving the real Tk window |
+| `test_default_sound.py` | The default sound when select_sound is missing (shipped file, silent override, broken file is an error) |
 | `test_extract.py` | Making icon/bottom from the video when missing (embedded image, frame, precedence, range check) |
 | `test_scaffold.py` | Template scaffolding (`--new`): copying, avoiding title-ID collisions, leaving nothing behind on failure, builds right away |
 | `test_e2e.py` | Builds real CIAs (odd input formats, Japanese titles, leaving the output intact on failure, fps, aspect ratio) |

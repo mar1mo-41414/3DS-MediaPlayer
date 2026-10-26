@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
+from .errors import MkciaError
 from .proc import Log, find_tool, run
 
 
@@ -47,16 +48,23 @@ BANNER_AUDIO_MAX_SEC = 3
 BANNER_AUDIO_FADE_SEC = 0.3
 
 
+# 既定のタイトル選択音 (select_sound が無いテンプレートで使う)。scripts/make-default-sound.sh で合成した短いチャイム
+DEFAULT_SELECT_SOUND = Path(__file__).with_name("default_select_sound.wav")
+
+
 def make_banner_audio(src: Optional[Path], dst: Path, log: Optional[Log] = None) -> Path:
-    """アイコン選択音 (16bit PCM WAV, 最大 3 秒)。src が無ければ無音。
+    """アイコン選択音 (16bit PCM WAV, 最大 3 秒)。src が無ければ既定の音 (DEFAULT_SELECT_SOUND) を使う。
+    無音にしたいときは、無音の音声ファイルを select_sound として置く。
 
     src は ffmpeg が読める音声ならよい (wav / mp3 / ogg / flac ...)。3 秒を超える分は切り捨て、
     切り口のプチ音を避けるため末尾にフェードアウトを掛ける。
     """
     fade = f"afade=t=out:st={BANNER_AUDIO_MAX_SEC - BANNER_AUDIO_FADE_SEC}:d={BANNER_AUDIO_FADE_SEC}"
-    common = ["-t", str(BANNER_AUDIO_MAX_SEC), "-af", fade, "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", dst]
     if src is None:
-        _ffmpeg(["-f", "lavfi", "-i", "anullsrc=r=32000:cl=stereo", "-t", "0.1", "-c:a", "pcm_s16le", dst], log)
-    else:
-        _ffmpeg(["-i", src, *common], log)
+        if not DEFAULT_SELECT_SOUND.is_file():
+            raise MkciaError(f"既定のタイトル選択音が見つかりません: {DEFAULT_SELECT_SOUND}"
+                             " (scripts/make-default-sound.sh で作れます)")
+        src = DEFAULT_SELECT_SOUND
+    _ffmpeg(["-i", src, "-t", str(BANNER_AUDIO_MAX_SEC), "-af", fade, "-ar", "32000", "-ac", "2",
+             "-c:a", "pcm_s16le", dst], log)
     return dst

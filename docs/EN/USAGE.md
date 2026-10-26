@@ -12,7 +12,7 @@ template/<name>/
 ├── video.mp4          source video (any format/resolution; re-encoded for the 3DS. mkv/mov/avi/webm/m4v also work)
 ├── icon.png           HOME Menu icon (optional; resized to 48x48; jpg/bmp/webp/gif also work)
 ├── bottom.png         still image for the bottom screen (optional; resized to 320x240; same formats)
-├── select_sound.wav   sound played when the icon is selected (optional; mp3/ogg/flac/m4a/aac also work;
+├── select_sound.wav   sound played when the icon is selected (optional; the default sound if absent; mp3/ogg/flac/m4a/aac also work;
 │                      the first 3 seconds are used, with a short fade-out)
 ├── banner.png         banner image (optional; generated from icon.png if absent)
 └── meta.json
@@ -21,6 +21,16 @@ template/<name>/
 Any of the listed extensions is accepted and the content only has to be readable by ffmpeg (a file whose extension
 does not match its content is fine). If several files of one kind exist, the first extension in the order above wins.
 Only `meta.json` and the video are required.
+
+### When select_sound is missing (the default sound)
+
+Without `select_sound.*`, the sound played when the icon is selected in the HOME Menu is a **default sound** (a short two-note chime,
+synthesised for this project: `tool/mkcia/default_select_sound.wav`; regenerate it with `scripts/make-default-sound.sh`). Many homebrew apps
+simply reuse a default sound instead of shipping their own. Put a `select_sound.*` in the template to use your own.
+
+**To make it silent, put a silent audio file in as `select_sound.wav`** (when the file is absent the default sound plays). A broken
+`select_sound.*` is an error and is not silently replaced by the default. Templates made with `--new` start without a `select_sound`
+(= the default sound).
 
 ### When icon / bottom are missing (made from the video)
 
@@ -83,7 +93,7 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # a path works too (-o names the ou
 - Precedence: command line > meta.json > defaults.
 - If the argument is both a path and a template name, the one containing `meta.json` is used (the path if both do).
 - The default output directory is `out/`.
-- `--new NAME`: copies `template/example` to `template/NAME`, sets `title` to `NAME` and `title_id` to a valid value that does not
+- `--new NAME`: copies `template/example` to `template/NAME` (without its title sound, so the default sound is used), sets `title` to `NAME` and `title_id` to a valid value that does not
   collide with other templates (the example's `long_title` and `output` are not carried over). The copy builds right away, so you can
   replace the assets and `meta.json` step by step. It fails for a duplicate or invalid name, or if `template/example` is missing.
 - `--frame-at SEC`: second of the video to take the frame from when icon / bottom are missing (overrides `frame_at` in `meta.json`).

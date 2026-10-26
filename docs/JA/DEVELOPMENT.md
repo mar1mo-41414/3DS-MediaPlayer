@@ -57,6 +57,7 @@ GUI のテストは画面 (`DISPLAY`) が必要で、無ければスキップさ
 | `test_cli.py` / `test_resolution.py` | CLI の終了コード、テンプレート名の解決、preset/出力名の優先順位 |
 | `test_cancel.py` | 外部コマンドの中止 |
 | `test_gui_model.py` / `test_gui.py` | GUI のロジック層 / Tk を実際に動かす操作テスト |
+| `test_default_sound.py` | select_sound が無いときの既定の音 (同梱ファイル・無音の指定・壊れた指定はエラー) |
 | `test_extract.py` | icon/bottom が無いときの動画からの画像生成 (埋め込み画像・フレーム・優先順位・範囲チェック) |
 | `test_scaffold.py` | 雛形生成 (`--new`): コピー・タイトルID の重複回避・失敗時に何も残さない・そのままビルドできる |
 | `test_e2e.py` | 実際に CIA を作る通しテスト (形式違いの入力、日本語タイトル、失敗時に出力を壊さない、fps・縦横比) |

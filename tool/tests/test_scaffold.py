@@ -49,13 +49,24 @@ class CreateFromExampleTest(unittest.TestCase):
         t = scaffold.create_from_example("MyMovie", self.root)
         self.assertEqual(t, self.root / "MyMovie")
         self.assertEqual(sorted(p.name for p in t.iterdir()),
-                         ["bottom.png", "icon.png", "meta.json", "select_sound.wav", "video.mp4"])
+                         ["bottom.png", "icon.png", "meta.json", "video.mp4"])  # 雛形に音声があっても引き継がない
         self.assertEqual((t / "video.mp4").read_bytes(), b"dummy video.mp4")
         m = load_meta(t / "meta.json")
         self.assertEqual(m.title, "MyMovie")
         self.assertEqual(m.long_title, "MyMovie")  # long_title は消えて title が使われる
         self.assertIsNone(m.output)  # 雛形の出力名は引き継がない
         self.assertEqual((m.preset, m.loop, m.volume, m.publisher), ("medium", False, 0.8, "mediaplayer"))
+
+    def test_the_title_sound_is_not_copied_so_the_default_is_used(self):
+        """タイトル選択音 (select_sound.*) は、どの拡張子でも引き継がない。ほかのファイルは引き継ぐ。"""
+        (self.root / "example" / "select_sound.mp3").write_bytes(b"also a sound")
+        (self.root / "example" / "select_sound_notes.txt").write_text("not a sound file")  # 似た名前の別ファイル
+        t = scaffold.create_from_example("x", self.root)
+        names = sorted(p.name for p in t.iterdir())
+        self.assertNotIn("select_sound.wav", names)
+        self.assertNotIn("select_sound.mp3", names)
+        self.assertIn("select_sound_notes.txt", names)  # "select_sound.*" だけが対象
+        self.assertIn("video.mp4", names)
 
     def test_example_is_left_untouched(self):
         before = (self.root / "example" / "meta.json").read_text()

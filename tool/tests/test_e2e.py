@@ -103,8 +103,9 @@ class SuccessTest(E2EBase):
         self.assertValidCia(self.build(t))
         self.assertTrue(any("音声がありません" in l for l in self.logs))
 
-    def test_template_without_sound_uses_silence(self):
+    def test_template_without_sound_builds_with_the_default_sound(self):
         self.assertValidCia(self.build(make_template(self.d / "t", copy_sound=False)))
+        self.assertTrue(any("既定のタイトル選択音" in l for l in self.logs))
 
     def test_alternative_input_formats(self):
         t = self.d / "alt"

@@ -278,7 +278,7 @@ class AssetTest(unittest.TestCase):
     def test_unset_assets(self):
         self.assertIsNone(self.t.find_asset("video"))
         self.assertIn("必須", self.t.describe_asset("video"))
-        self.assertEqual(self.t.describe_asset("select_sound"), "未設定")
+        self.assertIn("既定", self.t.describe_asset("select_sound"))  # 無ければ既定の音を使う
 
     def test_set_each_kind(self):
         for stem, maker, name in (("video", make_video, "a.mp4"), ("icon", make_image, "b.png"), ("bottom", make_image, "c.png"),

@@ -12,7 +12,7 @@ template/<名前>/
 ├── video.mp4          元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコード。mkv/mov/avi/webm/m4v も可)
 ├── icon.png           ホームメニューのアイコン (省略可。48x48 に自動リサイズ。jpg/bmp/webp/gif も可)
 ├── bottom.png         下画面に表示する静止画 (省略可。320x240 に自動リサイズ。同上)
-├── select_sound.wav   アイコン選択音 (省略可。mp3/ogg/flac/m4a/aac も可。先頭 3 秒を使い末尾をフェードアウト)
+├── select_sound.wav   アイコン選択音 (省略可。無ければ既定の音。mp3/ogg/flac/m4a/aac も可。先頭 3 秒を使い末尾をフェードアウト)
 ├── banner.png         バナー画像 (省略可。省略時は icon.png から生成)
 └── meta.json
 ```
@@ -20,6 +20,15 @@ template/<名前>/
 拡張子は上記のどれでもよく、中身は ffmpeg が読めればよい (拡張子と中身が違っていても可)。
 同じ種類のファイルが複数あるときは、上に書いた拡張子の順で最初のものを使う。
 必須なのは `meta.json` と動画だけ。
+
+### select_sound が無いとき (既定の音)
+
+`select_sound.*` が無ければ、ホームメニューでアイコンを選んだときの音に、**既定の音**を使う (2 音の短いチャイム。このプロジェクトで
+合成したもので、`tool/mkcia/default_select_sound.wav`。作り直しは `scripts/make-default-sound.sh`)。homebrew では独自の音を持たず、
+既定の音を使うものも多い。独自の音を使いたいときは `select_sound.*` を置く。
+
+**無音にしたいときは、無音の音声ファイルを `select_sound.wav` として置く** (無いときは既定の音が鳴る)。壊れた `select_sound.*` は
+既定の音に差し替えず、エラーにする。`--new` で作るテンプレートは、最初から `select_sound` を持たない (= 既定の音)。
 
 ### icon / bottom が無いとき (動画から作る)
 
@@ -81,7 +90,7 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # パスでも指定できる (-o �
 - 設定の優先順位は「コマンドライン引数 > meta.json > 既定」。
 - テンプレートがパスとしても名前としても見つかる場合は、`meta.json` のある方 (同じならパス) を使う。
 - 出力先の既定は `out/`。
-- `--new NAME`: `template/example` を `template/NAME` にコピーして、`title` を `NAME`、`title_id` を他のテンプレートと重ならない
+- `--new NAME`: `template/example` を `template/NAME` にコピーして (タイトル選択音は引き継がず、既定の音を使う)、`title` を `NAME`、`title_id` を他のテンプレートと重ならない
   有効な値にする (雛形の `long_title` と `output` は引き継がない)。コピーした時点でそのままビルドでき、素材と `meta.json` を
   自分のものに差し替えていける。同じ名前や使えない名前、`template/example` が無い場合はエラー。
 - `--frame-at SEC`: icon / bottom が無いときに動画から取るフレームの秒数 (`meta.json` の `frame_at` より優先)。

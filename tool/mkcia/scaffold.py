@@ -1,6 +1,6 @@
 """テンプレートの雛形生成 (`mkcia --new NAME`)。
 
-`template/example` をコピーして、名前とタイトルIDだけを新しいものにする。
+`template/example` をコピーして、名前とタイトルIDだけを新しいものにする。タイトル選択音はコピーしない (既定の音になる)。
 コピーした時点でそのままビルドできるので、動かしながら素材と meta.json を差し替えていける。
 """
 
@@ -36,7 +36,8 @@ def create_from_example(name: str, root: Path, example: str = EXAMPLE_NAME) -> P
     tmp = Path(tempfile.mkdtemp(prefix=f".{n}-", suffix=".tmp", dir=root))
     try:
         work = tmp / "new"
-        shutil.copytree(src, work)  # リンクは中身をコピーする (雛形の外を指さない)
+        # リンクは中身をコピーする (雛形の外を指さない)。タイトル選択音 (select_sound.*) は引き継がず、既定の音を使わせる
+        shutil.copytree(src, work, ignore=shutil.ignore_patterns("select_sound.*"))
         raw = json.loads((work / "meta.json").read_text(encoding="utf-8-sig"))
         if not isinstance(raw, dict):
             raise MkciaError(f"雛形の meta.json の最上位がオブジェクトではありません: {src / 'meta.json'}")

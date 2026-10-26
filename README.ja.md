@@ -32,7 +32,7 @@ ROM 本体は `prebuilt/mediaplayer.elf` が入っているので、ビルドし
 scripts/setup-tools.sh                  # bannertool / 3dstool / makerom を tools/bin/ に用意 (初回のみ)
 scripts/mkcia.sh example                # まず同梱のサンプルをそのままビルド → out/Example.cia
 scripts/mkcia.sh --new MyMovie          # サンプルをコピーして自分のテンプレート template/MyMovie を作る
-                                        #   (タイトル = MyMovie、タイトルID は重ならない有効な値を自動で付ける)
+                                        #   (タイトル = MyMovie、タイトルID は重ならない有効な値を自動で付ける。選択音は既定の音)
 #  → template/MyMovie の動画・画像・音声と meta.json を自分のものに差し替える
 scripts/mkcia.sh MyMovie                # → out/<output>.cia
 scripts/mkcia-gui.sh                    # GUI で同じことをする (要: python3-tk)
@@ -50,7 +50,7 @@ scripts/mkcia-gui.sh                    # GUI で同じことをする (要: pyt
 | `video.mp4` | 元動画 (任意の形式・解像度。ツールが 3DS 向けに再エンコードする) |
 | `icon.png` | ホームメニューのアイコン (省略可。無ければ動画から作る) |
 | `bottom.png` | 下画面に表示する静止画 (省略可。無ければ動画から作る) |
-| `select_sound.wav` | アイコン選択音 (省略可。mp3 なども可) |
+| `select_sound.wav` | アイコンを選んだときの音 (省略可。無ければ既定の音。mp3 なども可) |
 | `meta.json` | タイトル名・公開者・タイトルID・バージョンなど |
 
 `meta.json` の例:
