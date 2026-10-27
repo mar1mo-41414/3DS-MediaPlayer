@@ -1,7 +1,9 @@
 """GUI (Tkinter) の通し操作テスト。画面 (DISPLAY) が無い環境ではスキップする。"""
 
 import json
+import os
 import shutil
+import sys
 import tempfile
 import time
 import unittest
@@ -14,6 +16,10 @@ from mkcia.proc import set_cancel_event
 
 try:
     import tkinter as tk
+    if sys.platform == "darwin" and os.environ.get("SSH_CONNECTION"):
+        # macOS の ssh 越しにはウィンドウサーバーが無い。Homebrew の Python (Tk 9) は Tk() で例外ではなく
+        # segfault (exit 139) するので、試さずに画面無し扱いにする。GUI のテストは Mac のターミナルから実行する
+        raise RuntimeError("no window server over ssh")
     _r = tk.Tk()
     _r.destroy()
     HAVE_DISPLAY = True
@@ -56,6 +62,52 @@ if HAVE_DISPLAY:
 
         def show_info(self, text):
             self.infos.append(text)
+
+
+@unittest.skipUnless(HAVE_DISPLAY, "tkinter と画面 (DISPLAY) が必要")
+class StringDialogTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tk.Tk()
+        self.root.withdraw()
+
+    def tearDown(self):
+        self.root.destroy()
+
+    def ask(self, act, initial=""):
+        d = gui.StringDialog(self.root, "題", "尋ねる文字列:", initial)
+        self.root.after(50, lambda: act(d))
+        return d.show()
+
+    def test_ok_returns_the_text(self):
+        def act(d):
+            d.var.set("MyMovie")
+            d.ok_button.invoke()
+        self.assertEqual(self.ask(act), "MyMovie")
+
+    def test_cancel_returns_none(self):
+        def act(d):
+            d.var.set("ignored")
+            d.cancel_button.invoke()
+        self.assertIsNone(self.ask(act))
+
+    def test_closing_the_window_cancels(self):
+        def act(d):
+            d.var.set("typed but closed")
+            d.top.tk.call(d.top.protocol("WM_DELETE_WINDOW"))  # ウィンドウの閉じるボタン
+        self.assertIsNone(self.ask(act))
+
+    def test_empty_text_is_returned_as_is(self):
+        self.assertEqual(self.ask(lambda d: d.ok()), "")
+
+    def test_initial_text_is_shown(self):
+        self.assertEqual(self.ask(lambda d: d.ok(), initial="abc"), "abc")
+
+    def test_simpledialog_is_not_used(self):
+        """macOS の Tk 9 では simpledialog が `::tk::unsupported::MacWindowStyle` の欠如で開けない (Mac で実際に起きた)。"""
+        import re
+
+        src = Path(gui.__file__).read_text(encoding="utf-8")
+        self.assertIsNone(re.search(r"import[^\n]*simpledialog|simpledialog\.\w", src))
 
 
 @unittest.skipUnless(HAVE_DISPLAY, "tkinter と画面 (DISPLAY) が必要")

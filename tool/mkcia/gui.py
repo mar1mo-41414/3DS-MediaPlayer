@@ -13,7 +13,7 @@ from typing import Callable, Dict, Optional
 
 try:
     import tkinter as tk
-    from tkinter import filedialog, messagebox, simpledialog, ttk
+    from tkinter import filedialog, messagebox, ttk
 except ImportError:  # tkinter が無い Python (Debian の python3-tk 未導入、Homebrew の python-tk 未導入など)
     tk = None
 
@@ -32,6 +32,65 @@ FILETYPES = {
     "image": [("画像", "*.png *.jpg *.jpeg *.bmp *.webp *.gif"), ("すべて", "*.*")],
     "audio": [("音声", "*.wav *.mp3 *.ogg *.flac *.m4a *.aac"), ("すべて", "*.*")],
 }
+
+
+class StringDialog:
+    """1 行の文字列を尋ねるモーダルなダイアログ。
+
+    tkinter.simpledialog は使わない。macOS の Tk 9 (Homebrew の python-tk など) には、simpledialog が呼ぶ
+    `::tk::unsupported::MacWindowStyle` が無く、開いた瞬間に TclError で落ちるため。
+    """
+
+    def __init__(self, parent, title: str, prompt: str, initial: str = ""):
+        self.parent = parent
+        self.result: Optional[str] = None
+        self.top = top = tk.Toplevel(parent)
+        top.title(title)
+        top.transient(parent)
+        top.resizable(False, False)
+        top.protocol("WM_DELETE_WINDOW", self.cancel)
+        frame = ttk.Frame(top, padding=12)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text=prompt).pack(anchor="w")
+        self.var = tk.StringVar(value=initial)
+        self.entry = ttk.Entry(frame, textvariable=self.var, width=44)
+        self.entry.pack(fill="x", pady=(6, 10))
+        buttons = ttk.Frame(frame)
+        buttons.pack(anchor="e")
+        self.ok_button = ttk.Button(buttons, text="OK", command=self.ok)
+        self.ok_button.pack(side="left", padx=(0, 6))
+        self.cancel_button = ttk.Button(buttons, text="キャンセル", command=self.cancel)
+        self.cancel_button.pack(side="left")
+        top.bind("<Return>", lambda _e: self.ok())
+        top.bind("<Escape>", lambda _e: self.cancel())
+
+    def ok(self) -> None:
+        self.result = self.var.get()
+        self.top.destroy()
+
+    def cancel(self) -> None:
+        self.result = None
+        self.top.destroy()
+
+    def show(self) -> Optional[str]:
+        """親ウィンドウの中央に出し、閉じるまで待つ。OK なら入力した文字列、キャンセルなら None。"""
+        top = self.top
+        top.update_idletasks()
+        try:
+            x = self.parent.winfo_rootx() + (self.parent.winfo_width() - top.winfo_reqwidth()) // 2
+            y = self.parent.winfo_rooty() + (self.parent.winfo_height() - top.winfo_reqheight()) // 3
+            top.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        except tk.TclError:
+            pass
+        self.entry.focus_set()
+        try:
+            top.wait_visibility()
+            top.grab_set()
+        except tk.TclError:  # 画面に出せない/グラブできない環境でも、入力自体はできる
+            pass
+        if top.winfo_exists():  # 表示を待つ間に閉じられていたら、待たない
+            self.parent.wait_window(top)
+        return self.result
 
 
 class App:
@@ -252,7 +311,7 @@ class App:
         return filedialog.askdirectory(parent=self.root, title=title, mustexist=True) or None
 
     def ask_new_name(self) -> Optional[str]:
-        return simpledialog.askstring("新規テンプレート", "テンプレート名 (template/ 配下のフォルダ名):", parent=self.root)
+        return StringDialog(self.root, "新規テンプレート", "テンプレート名 (template/ 配下のフォルダ名):").show()
 
     def confirm(self, title: str, text: str) -> Optional[bool]:
         """はい=True / いいえ=False / キャンセル=None"""

@@ -308,6 +308,28 @@
   (`gui_model.tkinter_missing_message`。Tk 無しでテストできる)。`scripts/mkcia.sh` / `mkcia-gui.sh` は環境変数 `PYTHON` で Python を切り替えられるようにした
   (tkinter 入りの別の版が既にあるとき用)。USAGE に入れ方を追記。
 
+### Windows で mkcia-gui.cmd が「Python」とだけ表示して終わる (2026-10-27)
+- 報告: Windows VM で `mkcia-gui.cmd` を実行すると「Python」としか出ない。
+- 原因: その VM には本物の Python が無く、`python` は Microsoft Store を開くだけのスタブ (`%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe`) だった。
+  スタブは「Python」とだけ出して終了コード 9009 で終わる。旧ラッパーは `py` / `pyw` が無ければ `python` を呼ぶだけで、失敗も見分けなかった。
+  VM で再現できた (私が検証後に Python を消したので、結果的に報告と同じ状態になっていた)。
+- 対応: ラッパーは候補 (`%PYTHON%`、`py -3`、`python`、`python3`) を実際に `-c` で動かして、動いた最初のものを使う。無ければ
+  「動く Python 3 が見つからない。Store のショートカットかも。python.org / winget で入れる」と表示して終了コード 1。
+  GUI は、コンソールの無い `pythonw` で起動する前に、このコンソールで tkinter を確認する (起動後のエラーは見えないため)。
+  `.cmd` は ASCII のみ (cmd がコードページで読むため日本語は文字化けする) なので、メッセージは英語。
+  VM で、Store スタブだけの状態 (メッセージと終了コード 1)、本物の Python が PATH にある状態、`PYTHON` 指定のいずれも期待どおり、
+  デスクトップのセッションでは GUI が `pythonw -m mkcia.gui` で起動することを確認した。
+
+### Mac の GUI で「新規作成」が落ちる (2026-10-27)
+- 報告: Mac (Homebrew の python 3.12 + python-tk@3.12、Tk 9.1) で「新規作成」を押すと
+  `TclError: invalid command name "::tk::unsupported::MacWindowStyle"` (Linux では問題なし)。
+- 原因: 標準ライブラリの `tkinter.simpledialog` が、aqua (macOS) のとき開く瞬間に `::tk::unsupported::MacWindowStyle` を呼ぶ。
+  Tk 9 にはこのコマンドが無い。`filedialog` / `messagebox` はネイティブのダイアログを使うので影響しない。
+- 対応: `simpledialog.askstring` をやめ、自前の `StringDialog` (Toplevel + Entry + OK/キャンセル。Enter / Esc / 閉じるボタン対応) にした。
+  Linux の Xvfb でテスト (OK・キャンセル・閉じる・空文字・初期値)。再発防止に、gui.py が `simpledialog` を使わないことを見るテストも入れた。
+- ssh 越しの Mac では、Homebrew の Python (Tk 9) が `Tk()` で例外ではなく **segfault (exit 139)** するので、GUI テストは macOS の ssh では
+  試さずスキップするようにした (Mac のターミナルからなら動く)。Mac の実画面でダイアログが開くかは、ユーザーの確認待ち。
+
 ## 未解決・今後
 - 旧3DS: `light` / `medium` は映像・音声とも滑らか、タイトル音・終了時のフェードアウトも確認済み。
   `high` は再生できるが、デコードが再生速度ぎりぎりで音声が少し間延びする。デコードが遅れたときに
