@@ -155,8 +155,9 @@ scripts\mkcia-gui.cmd
 ```
 
 
-- `scripts\mkcia.cmd` / `scripts\mkcia-gui.cmd` は `mkcia.sh` / `mkcia-gui.sh` の Windows 版 (引数は同じ)。`py` ランチャーがあればそれを、無ければ
-  `python` を使う (Microsoft Store を開く "python" のスタブは使えない。Python を入れるか `py` を使うこと)。
+- `scripts\mkcia.cmd` / `scripts\mkcia-gui.cmd` は `mkcia.sh` / `mkcia-gui.sh` の Windows 版 (引数は同じ)。実際に動く最初の Python 3 を使う:
+  環境変数 `PYTHON` があればそれ、次に `py -3`、`python`、`python3`。Microsoft Store を開くだけの "python" (「Python」とだけ表示して失敗する) は飛ばし、
+  動く Python が無ければその旨を表示して終わる。Python 3 は python.org か `winget install Python.Python.3.12` で入れる。
 - `setup-tools.ps1` は動作確認した版の配布バイナリを取得する (`ffmpeg` は `PATH` 上にあれば取得しない。
   [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) の essentials ビルドは libx264 と aac を含む)。手元のツールを使うなら、`PATH` に置くか
   `MKCIA_TOOLS_DIR` で場所を指定する。

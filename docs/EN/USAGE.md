@@ -161,8 +161,9 @@ scripts\mkcia-gui.cmd
 ```
 
 
-- `scripts\mkcia.cmd` / `scripts\mkcia-gui.cmd` are the Windows counterparts of `mkcia.sh` / `mkcia-gui.sh` (same arguments). They use the
-  `py` launcher if there is one, otherwise `python` (the "python" stub that opens the Microsoft Store does not work; install Python or use `py`).
+- `scripts\mkcia.cmd` / `scripts\mkcia-gui.cmd` are the Windows counterparts of `mkcia.sh` / `mkcia-gui.sh` (same arguments). They pick the first
+  Python 3 that really runs: `%PYTHON%` if set, then `py -3`, `python`, `python3`. The "python" that only opens the Microsoft Store (it prints just
+  "Python") is skipped; if no real Python is found they say so and exit. Install Python 3 from python.org or with `winget install Python.Python.3.12`.
 - `setup-tools.ps1` fetches released binaries of known-good versions (`ffmpeg` is skipped if it is already on `PATH`; the essentials build of
   [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) includes libx264 and aac). To use tools you already have, put them on `PATH` or in
   a directory named by `MKCIA_TOOLS_DIR`.
