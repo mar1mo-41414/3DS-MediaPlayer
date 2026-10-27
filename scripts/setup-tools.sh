@@ -22,6 +22,17 @@ fetch_at() {
 }
 
 if [ ! -x "$BIN/bannertool" ]; then
+    # bannertool が使う buildtools (make_base) は x86_64 / i686 の Linux しか受け付けず、arm64 や macOS では
+    # "Unsupported host architecture." で止まる。時間をかけてから失敗しないよう、先に分かりやすく伝える。
+    case "$(uname -s)/$(uname -m)" in
+        Linux/x86_64|Linux/amd64) ;;
+        *)
+            echo "エラー: この環境 ($(uname -s)/$(uname -m)) では bannertool をビルドできません。" >&2
+            echo "  bannertool の上流 (buildtools) が対応しているのは x86_64 の Linux (と Windows) だけです。" >&2
+            echo "  自分でビルドした bannertool を tools/bin/ に置いてから再実行すれば、残り (3dstool / makerom) をビルドします。" >&2
+            exit 1
+            ;;
+    esac
     fetch_at https://github.com/Epicpkmn11/bannertool.git "$SRC/bannertool" "$BANNERTOOL_REF"
     # submodule (buildtools) の URL が git:// で、環境によってはタイムアウトするので https に読み替える
     git -C "$SRC/bannertool" -c url."https://github.com/".insteadOf=git://github.com/ \

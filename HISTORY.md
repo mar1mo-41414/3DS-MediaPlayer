@@ -278,6 +278,14 @@
 - 画面のスクリーンショットは、VM のデスクトップセッションが切断状態で `CopyFromScreen` が失敗したため撮れていない (GUI の起動と生存、
   GUI テスト 56 件の成功までは確認)。macOS は未確認。
 
+### arm64 Linux / macOS は非対応 (2026-10-27 ユーザー報告)
+- Ubuntu arm64 で `scripts/setup-tools.sh` を実行すると、bannertool のビルドが `buildtools/make_base:171: "Unsupported host architecture."` で止まる。
+  bannertool の上流 (Steveice10/buildtools) のホスト判定が x86_64 / i686 しか持たないため。macOS も同様に非対応と報告された
+  (Mac は buildtools が Darwin を認識するはずだが、報告では失敗。原因は未調査)。
+- 対応: 時間をかける前に分かりやすく止める事前チェックを `setup-tools.sh` に入れ、README に非対応を明記した。arm64 対応そのもの
+  (buildtools の判定を直す、bannertool の SMDH / banner 生成を Python で自前実装する等) は未着手。makerom / 3dstool が arm64 で
+  ビルドできるかも未確認。
+
 ## 未解決・今後
 - 旧3DS: `light` / `medium` は映像・音声とも滑らか、タイトル音・終了時のフェードアウトも確認済み。
   `high` は再生できるが、デコードが再生速度ぎりぎりで音声が少し間延びする。デコードが遅れたときに

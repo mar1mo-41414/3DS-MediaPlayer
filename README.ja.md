@@ -14,7 +14,7 @@
 
 - 旧 3DS の実機で、映像・音声・タイトル音・フェードアウトまで確認済み (`medium` まで滑らか)。
 - **New 3DS の実機は未確認** (`high` / `standard` プリセットと、追加コアでのデコードは New 3DS では未検証)。
-- 生成ツールは Linux (Python 3.12) で開発し、**Windows** (64bit) でも動く (CLI も GUI も。[Windows](docs/JA/USAGE.md#windows) 参照)。macOS は未確認。
+- 生成ツールは Linux (Python 3.12) で開発し、**Windows** (64bit) でも動く (CLI も GUI も。[Windows](docs/JA/USAGE.md#windows) 参照)。**arm64 の Linux と macOS は非対応**: `scripts/setup-tools.sh` が `bannertool` をビルドできない (上流のビルドシステムがそのホストを拒否する)。ほかは素の Python なので、動く `bannertool` を自分で用意すれば動く可能性はある (未確認)。
 
 ## 必要なもの
 
