@@ -13,6 +13,7 @@ jobs:
   # 外部ツール (ffmpeg / makerom など) が無い環境でも、テストが落ちずに正しくスキップされること。
   unit:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -29,12 +30,14 @@ jobs:
   # ツール一式と仮想ディスプレイをそろえて、全テストと、サンプルの CIA の生成まで行う。
   full:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg git make cmake g++ libssl-dev xvfb python3-tk
+          # ミラーが応答しないときに何十分も固まらないよう、再試行とタイムアウトを付ける
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends ffmpeg git make cmake g++ libssl-dev xvfb python3-tk
           ffmpeg -hide_banner -encoders 2>/dev/null | grep -E ' (libx264|aac) ' 
       - name: Cache tools
         uses: actions/cache@v4
@@ -57,6 +60,7 @@ jobs:
   # Windows でも、配布済みの exe 一式 (scripts/setup-tools.ps1) で全テストとサンプルの生成が通ること。
   windows:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -83,6 +87,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [unit, full, windows]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:

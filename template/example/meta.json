@@ -7,5 +7,6 @@
   "loop": false,
   "volume": 0.8,
   "preset": "medium",
-  "output": "Example"
+  "output": "Example",
+  "product_code": "CTR-B-TEST"
 }

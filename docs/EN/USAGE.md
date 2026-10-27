@@ -75,7 +75,8 @@ You cannot pick values above these limits (the 3DS CPU could not keep up).
 | `standard` | 400x240 | 24 | 350 kbps | AAC 64 kbps / 32 kHz | New 3DS (**untested on a New 3DS**) |
 
 On a real Old 3DS `light` and `medium` are smooth. `high` plays, but decoding barely keeps up with real time and the
-audio can sound slightly stretched.
+audio can sound slightly stretched. Whether `high` keeps up depends on the video: decoding cost grows with how much changes on
+screen, and a very simple video (a black-and-white one such as Bad Apple) played at `high` on a real console with no dropped frames and no audio drift.
 No preset has been tested on a real New 3DS (it uses the extra application core for decoding, which has not been tried yet).
 
 ## CLI
