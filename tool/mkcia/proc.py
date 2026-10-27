@@ -24,6 +24,14 @@ def _search_dirs():
     yield REPO_ROOT / "tools" / "bin"
 
 
+# 外部コマンドの起動に共通の引数。Windows では GUI (pythonw、コンソール無し) から子プロセスを起こすと、
+# 既定ではコンソールウィンドウが一瞬ずつ開いて閉じる (サムネイルや動画の確認で ffmpeg / ffprobe を呼ぶたび) ので、出さない。
+# stdin も塞ぐ (コンソールが無いと、標準入力のハンドルが無効で起動に失敗することがあるため)。
+SUBPROCESS_KWARGS = {"stdin": subprocess.DEVNULL}
+if os.name == "nt":
+    SUBPROCESS_KWARGS["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+
 def find_tool(name: str) -> str:
     """MKCIA_TOOLS_DIR -> <repo>/tools/bin -> PATH の順で外部ツールを探す。"""
     # Windows では ffmpeg -> ffmpeg.exe のように拡張子を補って探す (shutil.which と同じ PATHEXT)
@@ -82,6 +90,7 @@ def run(cmd: Sequence[str], log: Optional[Log] = None, cwd: Optional[Path] = Non
             stderr=subprocess.PIPE,
             text=True,
             errors="replace",
+            **SUBPROCESS_KWARGS,
         )
     except OSError as e:
         raise MkciaError(f"{cmd[0]} を実行できません: {e}") from e

@@ -1,5 +1,6 @@
 """外部コマンドの中止 (GUI の「中止」ボタンの土台)。"""
 
+import os
 import threading
 import time
 import unittest
@@ -63,6 +64,30 @@ class RunCancelTest(unittest.TestCase):
     def test_large_output_does_not_deadlock(self):
         out = run(PY + ["import sys; sys.stdout.write('x' * 3000000)"])
         self.assertEqual(len(out), 3000000)
+
+    def test_children_get_no_console_window_and_no_stdin(self):
+        """Windows の GUI (pythonw) が ffmpeg 等を起こすたびにコンソールが一瞬開く問題の対策 (CREATE_NO_WINDOW と stdin を塞ぐ)。"""
+        import subprocess
+
+        self.assertEqual(proc.SUBPROCESS_KWARGS["stdin"], subprocess.DEVNULL)
+        if os.name == "nt":
+            self.assertEqual(proc.SUBPROCESS_KWARGS["creationflags"], subprocess.CREATE_NO_WINDOW)
+        else:
+            self.assertNotIn("creationflags", proc.SUBPROCESS_KWARGS)  # POSIX の Popen には無い引数
+        # run() が実際にそれを Popen に渡す (Windows でなくても、渡す経路は同じ)
+        fake = {"stdin": subprocess.DEVNULL, "creationflags": 0}
+        seen = {}
+        real = subprocess.Popen
+
+        def spy(*a, **kw):
+            seen.update(kw)
+            kw.pop("creationflags", None)
+            return real(*a, **kw)
+
+        with mock.patch.object(proc, "SUBPROCESS_KWARGS", fake), mock.patch.object(proc.subprocess, "Popen", spy):
+            run(PY + ["print('x')"])
+        self.assertEqual(seen["stdin"], subprocess.DEVNULL)
+        self.assertIn("creationflags", seen)
 
     def test_missing_command(self):
         with self.assertRaises(MkciaError):

@@ -23,7 +23,7 @@ from .errors import MkciaError
 from .fsutil import create_tmp_file
 from .meta import parse_meta
 from .pipeline import BuildOptions, Resolved, build_cia, validate_inputs
-from .proc import TEMPLATE_ROOT, Cancelled, find_tool, set_cancel_event
+from .proc import SUBPROCESS_KWARGS, TEMPLATE_ROOT, Cancelled, find_tool, set_cancel_event
 from .validate import (
     IMAGE_EXTS,
     SOUND_EXTS,
@@ -386,7 +386,7 @@ def make_thumbnail(path: Path, max_side: int = 96, seek: float = 0.0) -> Optiona
         cmd += ["-i", str(path), "-frames:v", "1", "-vf",
                 f"scale={max_side}:{max_side}:force_original_aspect_ratio=decrease",
                 "-f", "image2pipe", "-c:v", "png", "-"]
-        r = subprocess.run(cmd, capture_output=True, timeout=30)
+        r = subprocess.run(cmd, capture_output=True, timeout=30, **SUBPROCESS_KWARGS)
     except (MkciaError, OSError, subprocess.TimeoutExpired):
         return None
     return r.stdout if r.returncode == 0 and r.stdout.startswith(b"\x89PNG") else None

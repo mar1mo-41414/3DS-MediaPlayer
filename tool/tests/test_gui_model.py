@@ -412,6 +412,20 @@ class AssetTest(unittest.TestCase):
         bad = self.src / "bad.png"
         bad.write_bytes(b"nope")
         self.assertIsNone(g.make_thumbnail(bad))
+
+    def test_thumbnail_command_hides_the_console_window(self):
+        """サムネイル用の ffmpeg が、Windows の GUI でコンソールを開かないよう SUBPROCESS_KWARGS を渡している。"""
+        seen = {}
+
+        def fake_run(cmd, **kw):
+            seen.update(kw)
+            return mock.Mock(returncode=0, stdout=b"\x89PNG...")
+
+        with mock.patch.object(g.subprocess, "run", fake_run), mock.patch.object(g, "find_tool", lambda n: n), \
+                mock.patch.object(g, "SUBPROCESS_KWARGS", {"stdin": g.subprocess.DEVNULL, "creationflags": 0x08000000}):
+            self.assertTrue(g.make_thumbnail(Path("whatever.png")).startswith(b"\x89PNG"))
+        self.assertEqual(seen["creationflags"], 0x08000000)
+        self.assertEqual(seen["stdin"], g.subprocess.DEVNULL)
         self.assertIsNone(g.make_thumbnail(self.src / "missing.png"))
 
 
