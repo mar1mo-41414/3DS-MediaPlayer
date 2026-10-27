@@ -184,7 +184,7 @@ libraries of `3dstool` are not used, and the system OpenSSL / libcurl are used i
   pass `OPENSSL_ROOT_DIR=<prefix>`). macOS does not ship OpenSSL headers, so without one the script stops with a message.
   The GUI needs `python3 -m tkinter` to work (Homebrew: `brew install python-tk@3.X` for your Python's version, see [GUI](#gui)).
 - Verified: the three tools build, `example` builds, and the whole test suite passes (GUI tests skipped, no display) on arm64 Ubuntu and on an M4 Mac;
-  the CIA's ExHeader and ExeFS are byte-identical to the ones built on x86_64 Linux. Not verified: the GUI on macOS, and playing a CIA built there on a console.
+  the CIA's ExHeader and ExeFS are byte-identical to the ones built on x86_64 Linux. The GUI was also opened on the M4 Mac and built the sample there. Not verified: playing a CIA built on arm64 / macOS on a console.
 
 ## Controls (on the 3DS)
 
