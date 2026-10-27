@@ -25,7 +25,12 @@ For 3DS consoles with custom firmware (CFW); install the result with FBI or simi
 - For sound on a real console: the DSP firmware dumped from your own 3DS (`sdmc:/3ds/dspfirm.cdc`).
   Without it, only the video plays.
 
-The ROM is shipped prebuilt as `prebuilt/mediaplayer.elf`, so Docker/devkitPro are not needed unless you rebuild it.
+### Only if you want to build the ROM yourself
+
+The ROM is shipped prebuilt as `prebuilt/mediaplayer.elf`, so none of this is needed just to make CIAs.
+
+- Docker (the ROM is built in the `devkitpro/devkitarm` image, so devkitPro itself does not need to be installed on the host)
+- Details and the build scripts: [docs/EN/DEVELOPMENT.md](docs/EN/DEVELOPMENT.md)
 
 ## Quick start
 

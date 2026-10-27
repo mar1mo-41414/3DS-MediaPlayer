@@ -24,7 +24,12 @@
   要 git, make, cmake, g++, libssl-dev。`makerom` が PATH 上にあればビルドしない)
 - 実機で音声を鳴らすには、自分の 3DS から吸い出した DSP ファームウェア (`sdmc:/3ds/dspfirm.cdc`)。無ければ映像だけ再生する。
 
-ROM 本体は `prebuilt/mediaplayer.elf` が入っているので、ビルドし直さない限り Docker や devkitPro は不要。
+### ROM を自分でビルドし直したいときだけ
+
+ROM 本体は `prebuilt/mediaplayer.elf` が入っているので、CIA を作るだけなら下記は何も要らない。
+
+- Docker (ROM は `devkitpro/devkitarm` イメージの中でビルドするので、ホストに devkitPro 自体を入れる必要はない)
+- 詳細とビルド用スクリプト: [docs/JA/DEVELOPMENT.md](docs/JA/DEVELOPMENT.md)
 
 ## クイックスタート
 
