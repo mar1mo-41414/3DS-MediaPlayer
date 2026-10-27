@@ -281,7 +281,8 @@
 ### arm64 Linux / macOS は非対応 (2026-10-27 ユーザー報告)
 - Ubuntu arm64 で `scripts/setup-tools.sh` を実行すると、bannertool のビルドが `buildtools/make_base:171: "Unsupported host architecture."` で止まる。
   bannertool の上流 (Steveice10/buildtools) のホスト判定が x86_64 / i686 しか持たないため。macOS も同様に非対応と報告された
-  (Mac は buildtools が Darwin を認識するはずだが、報告では失敗。原因は未調査)。
+  (Mac は OS としては Darwin を認識できるが、M4 など Apple Silicon は arm64 なので、アーキテクチャの判定で同じく弾かれるはず、
+  というのがユーザーの推測。筋が通っている。)
 - 対応: 時間をかける前に分かりやすく止める事前チェックを `setup-tools.sh` に入れ、README に非対応を明記した。arm64 対応そのもの
   (buildtools の判定を直す、bannertool の SMDH / banner 生成を Python で自前実装する等) は未着手。makerom / 3dstool が arm64 で
   ビルドできるかも未確認。
