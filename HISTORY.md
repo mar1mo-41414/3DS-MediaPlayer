@@ -297,8 +297,10 @@
 - Mac での嵌り: ssh の非ログインシェルは `/opt/homebrew/bin` が PATH に無く、Homebrew が入っていても `which brew` で見つからない
   (cmake / ffmpeg / openssl も同様)。スクリプトは `/opt/homebrew/bin/brew` と `/usr/local/bin/brew` も直接見るようにした。
 - macOS の GUI は、後日ユーザーが M4 Mac で開いてサンプルをビルドし、問題なしと確認 (その CIA は ExHeader / ExeFS が x86 産と一致、動画は H.264 baseline 360x216 20fps で復号OK)。
-- 未確認: arm64 / macOS で作った CIA の実機での再生 (ExHeader / ExeFS が一致しているので差が出るのは動画 RomFS のみのはず)、
-  Intel Mac。
+- 後日、ユーザーが arm64 Ubuntu 産と Mac 産の CIA を 3DS 実機で再生し、x86_64 Linux 産と違いなく再生できたと確認した
+  (ExHeader / ExeFS が一致しているので予想どおり)。
+- 未確認: Intel Mac。
+- 同日、Windows の GUI で素材ごとにコンソールが一瞬開く問題 (下) も、直した後にユーザーが解消を確認した。
 
 ### Mac で GUI が起動しない: tkinter (2026-10-27)
 - 報告: Mac で `scripts/mkcia-gui.sh` が「tkinter が必要」で終わる (入れ方は Debian の `python3-tk` しか書いてなかった)。

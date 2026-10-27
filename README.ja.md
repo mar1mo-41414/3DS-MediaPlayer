@@ -14,7 +14,7 @@
 
 - 旧 3DS の実機で、映像・音声・タイトル音・フェードアウトまで確認済み (`medium` まで滑らか)。
 - **New 3DS の実機は未確認** (`high` / `standard` プリセットと、追加コアでのデコードは New 3DS では未検証)。
-- 生成ツールは Linux (Python 3.12) で開発し、**Windows** (64bit) でも動く (CLI も GUI も。[Windows](docs/JA/USAGE.md#windows) 参照)。**arm64 の Linux** と **Apple Silicon の macOS** でも CLI で CIA を作れる (`scripts/setup-tools.sh` が、arm64 を弾く上流のビルドファイルを直してからビルドする。macOS では GUI も開いてビルドできる。そこで作った CIA を実機で動かす確認は未実施)。[macOS / arm64](docs/JA/USAGE.md#macos--arm64) 参照。
+- 生成ツールは Linux (Python 3.12) で開発し、**Windows** (64bit) でも動く (CLI も GUI も。[Windows](docs/JA/USAGE.md#windows) 参照)。**arm64 の Linux** と **Apple Silicon の macOS** でも CLI で CIA を作れる (`scripts/setup-tools.sh` が、arm64 を弾く上流のビルドファイルを直してからビルドする。macOS では GUI も開いてビルドできる。arm64 の Ubuntu と macOS で作った CIA は、x86_64 の Linux で作ったものと同じように実機で再生できた)。[macOS / arm64](docs/JA/USAGE.md#macos--arm64) 参照。
 
 ## 必要なもの
 
