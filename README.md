@@ -43,7 +43,7 @@ scripts/mkcia.sh --new MyMovie          # copy the sample into your own template
                                         #   (title = MyMovie, with a valid, non-colliding title ID; the default select sound)
 #  -> replace the video, images, sound and meta.json in template/MyMovie with yours
 scripts/mkcia.sh MyMovie                # -> out/<output>.cia
-scripts/mkcia-gui.sh                    # the same thing in a GUI (needs python3-tk)
+scripts/mkcia-gui.sh                    # the same thing in a GUI (needs tkinter, see docs/EN/USAGE.md#gui)
 ```
 
 A prebuilt sample (`Example.cia`) is on the [Releases](https://github.com/mar1mo-41414/3DS-MediaPlayer/releases) page,

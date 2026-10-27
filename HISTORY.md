@@ -299,6 +299,14 @@
 - 未確認: macOS の GUI、arm64 / macOS で作った CIA の実機での再生 (ExHeader / ExeFS が一致しているので差が出るのは動画 RomFS のみのはず)、
   Intel Mac。
 
+### Mac で GUI が起動しない: tkinter (2026-10-27)
+- 報告: Mac で `scripts/mkcia-gui.sh` が「tkinter が必要」で終わる (入れ方は Debian の `python3-tk` しか書いてなかった)。
+- 原因: Homebrew の `python3` (3.15) は tkinter を単体で含まない (`ModuleNotFoundError: Unsupported platform for standard library module '_tkinter'`)。
+  別プロジェクト用の `python-tk@3.14` は入っていたが、`python3` は 3.15 を指すので使われない。Apple 標準の `/usr/bin/python3` (3.9) は Tk 8.5 で動くが古い。
+- 対応: 案内文を、使った Python のパス/版と OS ごとの入れ方 (macOS: `brew install python-tk@<その版>`) を出すものに変更
+  (`gui_model.tkinter_missing_message`。Tk 無しでテストできる)。`scripts/mkcia.sh` / `mkcia-gui.sh` は環境変数 `PYTHON` で Python を切り替えられるようにした
+  (tkinter 入りの別の版が既にあるとき用)。USAGE に入れ方を追記。
+
 ## 未解決・今後
 - 旧3DS: `light` / `medium` は映像・音声とも滑らか、タイトル音・終了時のフェードアウトも確認済み。
   `high` は再生できるが、デコードが再生速度ぎりぎりで音声が少し間延びする。デコードが遅れたときに

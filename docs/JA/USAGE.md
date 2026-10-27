@@ -116,8 +116,16 @@ scripts/mkcia.sh path/to/dir -o /tmp/x.cia   # パスでも指定できる (-o �
 ## GUI
 
 ```bash
-scripts/mkcia-gui.sh          # Tkinter の GUI (要: python3-tk。Debian/Ubuntu 系は sudo apt install python3-tk)
+scripts/mkcia-gui.sh          # Tkinter の GUI (要: tkinter が使える Python。下記)
+PYTHON=python3.14 scripts/mkcia-gui.sh   # 別の Python で起動する (mkcia.sh も同じ環境変数)
 ```
+
+tkinter の入れ方 (足りないと、使った Python を示すメッセージが出る):
+
+- Debian/Ubuntu 系: `sudo apt install python3-tk` (Fedora 系: `sudo dnf install python3-tkinter`)
+- macOS (Homebrew): `brew install python-tk@3.X`。3.X は実行する `python3` のバージョン (`python3 --version`) に合わせる。
+  Homebrew の Python は tkinter を単体では含まない。Apple 標準の `/usr/bin/python3` は古い Tk 8.5 で非推奨。
+- Windows: python.org のインストーラは既定で tcl/tk を含む。
 
 - テンプレートの選択・新規作成 (タイトルIDは名前から自動採番)、基本情報の編集、素材の差し替え (サムネイルと情報を表示)、
   プリセット・ループ・音量・出力名・出力先の設定、検証・ビルド・中止を 1 つの画面で行う。CLI と同じ処理を呼ぶ。
@@ -166,7 +174,7 @@ scripts\mkcia-gui.cmd
 - Debian/Ubuntu arm64: `sudo apt install git make cmake g++ libssl-dev libcurl4-openssl-dev ffmpeg python3`
 - macOS: `brew install cmake openssl@3 ffmpeg` (Homebrew の `openssl@3` はスクリプトが自分で探す。ssh 越しのような非ログインシェルで PATH に無くても見つける。
   別の場所なら `OPENSSL_ROOT_DIR=<prefix>` を付ける)。macOS には OpenSSL のヘッダが標準で無いので、無ければメッセージを出して止まる。
-  GUI には `python3 -m tkinter` が動くことが必要 (Homebrew: `brew install python-tk`)。
+  GUI には `python3 -m tkinter` が動くことが必要 (Homebrew: Python のバージョンに合わせて `brew install python-tk@3.X`。[GUI](#gui) 参照)。
 - 確認済み: arm64 の Ubuntu と M4 の Mac で、3 つのツールのビルド、`example` のビルド、全テスト (GUI テストは画面が無くスキップ) が通り、
   CIA の ExHeader / ExeFS は x86_64 の Linux で作ったものとバイト一致。未確認: macOS の GUI と、そこで作った CIA を実機で動かすこと。
 

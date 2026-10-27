@@ -14,7 +14,7 @@ from typing import Callable, Dict, Optional
 try:
     import tkinter as tk
     from tkinter import filedialog, messagebox, simpledialog, ttk
-except ImportError:  # python3-tk が無い環境
+except ImportError:  # tkinter が無い Python (Debian の python3-tk 未導入、Homebrew の python-tk 未導入など)
     tk = None
 
 from . import gui_model as gm
@@ -678,7 +678,7 @@ class App:
 
 def main(argv=None) -> int:
     if tk is None:
-        print("エラー: GUI には tkinter が必要です。 (Debian/Ubuntu 系: sudo apt install python3-tk)", file=sys.stderr)
+        print(gm.tkinter_missing_message(), file=sys.stderr)
         return 1
     try:
         root = tk.Tk()

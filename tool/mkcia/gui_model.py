@@ -465,6 +465,27 @@ def start_validation(options: BuildOptions) -> Job:
     return Job(lambda log: summarize_validation(validate_inputs(options, log))).start()
 
 
+def tkinter_missing_message(platform: str = sys.platform, executable: str = sys.executable,
+                            version=sys.version_info) -> str:
+    """GUI に必要な tkinter が無いときの案内。使っている Python と、OS ごとの入れ方を示す。"""
+    major_minor = f"{version[0]}.{version[1]}"
+    lines = [
+        "エラー: この Python には GUI に必要な tkinter が入っていません。",
+        f"  使っている Python: {executable} ({major_minor}.{version[2]})",
+        "  入れ方:",
+    ]
+    if platform == "darwin":
+        lines.append(f"    macOS (Homebrew): brew install python-tk@{major_minor}   (Python のバージョンに合わせる)")
+    elif platform.startswith("win"):
+        lines.append("    Windows: python.org のインストーラで Python を入れ直し、tcl/tk を含める (既定で含まれる)")
+    else:
+        lines.append("    Debian/Ubuntu 系: sudo apt install python3-tk")
+        lines.append("    Fedora 系: sudo dnf install python3-tkinter")
+    if not platform.startswith("win"):
+        lines.append("  tkinter が入っている別の Python があるなら: PYTHON=python3.x scripts/mkcia-gui.sh")
+    return "\n".join(lines)
+
+
 def open_folder(path: Path) -> bool:
     """ファイルマネージャでフォルダを開く。開けなければ False。"""
     path = Path(path)

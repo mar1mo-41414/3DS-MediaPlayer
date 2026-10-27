@@ -423,6 +423,35 @@ class DurationFormatTest(unittest.TestCase):
                 self.assertEqual(g._fmt_duration(sec), want)
 
 
+class TkinterMessageTest(unittest.TestCase):
+    def msg(self, platform, exe="/opt/homebrew/bin/python3", ver=(3, 15, 1)):
+        return g.tkinter_missing_message(platform, exe, ver)
+
+    def test_macos_names_the_formula_for_the_running_python(self):
+        m = self.msg("darwin")
+        self.assertIn("brew install python-tk@3.15", m)
+        self.assertNotIn("apt", m)
+        self.assertIn("/opt/homebrew/bin/python3 (3.15.1)", m)
+
+    def test_the_formula_follows_the_python_version(self):
+        self.assertIn("python-tk@3.12", self.msg("darwin", ver=(3, 12, 4)))
+
+    def test_linux_shows_package_commands(self):
+        m = self.msg("linux", "/usr/bin/python3", (3, 12, 3))
+        self.assertIn("sudo apt install python3-tk", m)
+        self.assertIn("dnf install python3-tkinter", m)
+        self.assertNotIn("brew", m)
+
+    def test_windows_has_no_shell_hint(self):
+        m = self.msg("win32", r"C:\Python312\python.exe", (3, 12, 10))
+        self.assertIn("tcl/tk", m)
+        self.assertNotIn("PYTHON=", m)
+
+    def test_other_pythons_can_be_chosen_on_posix(self):
+        self.assertIn("PYTHON=python3.x scripts/mkcia-gui.sh", self.msg("darwin"))
+        self.assertIn("PYTHON=python3.x scripts/mkcia-gui.sh", self.msg("linux"))
+
+
 class EstimateTest(unittest.TestCase):
     def test_size_text(self):
         self.assertEqual(g.estimate_size_text(None, "light"), "不明")

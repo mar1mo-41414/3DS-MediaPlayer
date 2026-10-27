@@ -42,7 +42,7 @@ scripts/mkcia.sh --new MyMovie          # サンプルをコピーして自分�
                                         #   (タイトル = MyMovie、タイトルID は重ならない有効な値を自動で付ける。選択音は既定の音)
 #  → template/MyMovie の動画・画像・音声と meta.json を自分のものに差し替える
 scripts/mkcia.sh MyMovie                # → out/<output>.cia
-scripts/mkcia-gui.sh                    # GUI で同じことをする (要: python3-tk)
+scripts/mkcia-gui.sh                    # GUI で同じことをする (要: tkinter。docs/JA/USAGE.md の GUI 参照)
 ```
 
 ビルド済みのサンプル (`Example.cia`) は [Releases](https://github.com/mar1mo-41414/3DS-MediaPlayer/releases) にあるので、

@@ -121,8 +121,16 @@ damages an existing output.
 ## GUI
 
 ```bash
-scripts/mkcia-gui.sh          # Tkinter GUI (needs python3-tk; on Debian/Ubuntu: sudo apt install python3-tk)
+scripts/mkcia-gui.sh          # Tkinter GUI (needs a Python with tkinter, see below)
+PYTHON=python3.14 scripts/mkcia-gui.sh   # run it with another Python (the same variable works for mkcia.sh)
 ```
+
+Installing tkinter (if the script says it is missing; the message names the Python it used):
+
+- Debian/Ubuntu: `sudo apt install python3-tk` (Fedora: `sudo dnf install python3-tkinter`)
+- macOS (Homebrew): `brew install python-tk@3.X`, where 3.X is the version of the `python3` you run (`python3 --version`).
+  Homebrew's Python does not include tkinter by itself. Apple's `/usr/bin/python3` has an old Tk 8.5 (not recommended).
+- Windows: tcl/tk is included by python.org's installer by default.
 
 - Choose or create a template (a new one gets an automatically assigned title ID), edit the basic info, replace
   assets (with thumbnails and details), set preset / loop / volume / output name / output folder, and validate,
@@ -174,7 +182,7 @@ libraries of `3dstool` are not used, and the system OpenSSL / libcurl are used i
 - Debian/Ubuntu arm64: `sudo apt install git make cmake g++ libssl-dev libcurl4-openssl-dev ffmpeg python3`
 - macOS: `brew install cmake openssl@3 ffmpeg` (the script finds Homebrew's `openssl@3` itself, even from a non-login shell such as ssh; otherwise
   pass `OPENSSL_ROOT_DIR=<prefix>`). macOS does not ship OpenSSL headers, so without one the script stops with a message.
-  `python3 -m tkinter` must work for the GUI (Homebrew: `brew install python-tk`).
+  The GUI needs `python3 -m tkinter` to work (Homebrew: `brew install python-tk@3.X` for your Python's version, see [GUI](#gui)).
 - Verified: the three tools build, `example` builds, and the whole test suite passes (GUI tests skipped, no display) on arm64 Ubuntu and on an M4 Mac;
   the CIA's ExHeader and ExeFS are byte-identical to the ones built on x86_64 Linux. Not verified: the GUI on macOS, and playing a CIA built there on a console.
 
