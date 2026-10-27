@@ -177,7 +177,7 @@ scripts\mkcia-gui.cmd
   別の場所なら `OPENSSL_ROOT_DIR=<prefix>` を付ける)。macOS には OpenSSL のヘッダが標準で無いので、無ければメッセージを出して止まる。
   GUI には `python3 -m tkinter` が動くことが必要 (Homebrew: Python のバージョンに合わせて `brew install python-tk@3.X`。[GUI](#gui) 参照)。
 - 確認済み: arm64 の Ubuntu と M4 の Mac で、3 つのツールのビルド、`example` のビルド、全テスト (GUI テストは画面が無くスキップ) が通り、
-  CIA の ExHeader / ExeFS は x86_64 の Linux で作ったものとバイト一致。M4 の Mac では GUI も開き、サンプルをビルドできた。arm64 の Ubuntu と macOS で作った CIA も、実機で x86_64 の Linux 産と同じように再生できた。未確認: Intel Mac。
+  CIA の ExHeader / ExeFS は x86_64 の Linux で作ったものとバイト一致。M4 の Mac では GUI も開き、サンプルをビルドできた。arm64 の Ubuntu と macOS で作った CIA も、実機で x86_64 の Linux 産と同じように再生できた。Intel Mac は対象外 (未テスト。必要になれば対応する)。
 
 ## 操作 (3DS 側)
 

@@ -299,7 +299,7 @@
 - macOS の GUI は、後日ユーザーが M4 Mac で開いてサンプルをビルドし、問題なしと確認 (その CIA は ExHeader / ExeFS が x86 産と一致、動画は H.264 baseline 360x216 20fps で復号OK)。
 - 後日、ユーザーが arm64 Ubuntu 産と Mac 産の CIA を 3DS 実機で再生し、x86_64 Linux 産と違いなく再生できたと確認した
   (ExHeader / ExeFS が一致しているので予想どおり)。
-- 未確認: Intel Mac。
+- Intel Mac は対象外とした (GitHub Actions の Intel Mac ランナーも無くなり、Intel Mac だけの人も減っているため。必要になったら対応する)。
 - 同日、Windows の GUI で素材ごとにコンソールが一瞬開く問題 (下) も、直した後にユーザーが解消を確認した。
 
 ### Mac で GUI が起動しない: tkinter (2026-10-27)
