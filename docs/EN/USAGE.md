@@ -165,6 +165,19 @@ scripts\mkcia-gui.cmd
 - Not available on Windows: the shell scripts for building the ROM (`build-rom.sh` and friends, which need Docker/devkitPro and are only
   for developing the ROM itself).
 
+## macOS / arm64
+
+The same `scripts/setup-tools.sh` / `scripts/mkcia.sh` work on **arm64 Linux** and **Apple-Silicon macOS**. The upstream build files of
+`bannertool` and `3dstool` only know x86, so the script patches them right after fetching (arm64 hosts accepted; the x86-only prebuilt
+libraries of `3dstool` are not used, and the system OpenSSL / libcurl are used instead).
+
+- Debian/Ubuntu arm64: `sudo apt install git make cmake g++ libssl-dev libcurl4-openssl-dev ffmpeg python3`
+- macOS: `brew install cmake openssl@3 ffmpeg` (the script finds Homebrew's `openssl@3` itself, even from a non-login shell such as ssh; otherwise
+  pass `OPENSSL_ROOT_DIR=<prefix>`). macOS does not ship OpenSSL headers, so without one the script stops with a message.
+  `python3 -m tkinter` must work for the GUI (Homebrew: `brew install python-tk`).
+- Verified: the three tools build, `example` builds, and the whole test suite passes (GUI tests skipped, no display) on arm64 Ubuntu and on an M4 Mac;
+  the CIA's ExHeader and ExeFS are byte-identical to the ones built on x86_64 Linux. Not verified: the GUI on macOS, and playing a CIA built there on a console.
+
 ## Controls (on the 3DS)
 
 - **START**: quit at any time and return to the HOME Menu.

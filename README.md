@@ -14,7 +14,7 @@ For 3DS consoles with custom firmware (CFW); install the result with FBI or simi
 
 - Verified on a real **Old 3DS**: video, audio, the title sound, and the fade-out all work (smooth up to the `medium` preset).
 - **Not verified on a New 3DS** (the `high` / `standard` presets and the extra-core decoding path are untested there).
-- The build tool is developed on Linux (Python 3.12) and also runs on **Windows** (64-bit; CLI and GUI, see [Windows](docs/EN/USAGE.md#windows)). **Not supported: Linux on arm64 and macOS** — `scripts/setup-tools.sh` cannot build `bannertool` there (its upstream build system rejects those hosts); the rest of the tool is plain Python and may work if you provide a working `bannertool` yourself (untested).
+- The build tool is developed on Linux (Python 3.12) and also runs on **Windows** (64-bit; CLI and GUI, see [Windows](docs/EN/USAGE.md#windows)). The CLI also builds CIAs on **arm64 Linux** and **Apple-Silicon macOS** (`scripts/setup-tools.sh` patches the upstream build files that reject arm64; the GUI is untested on macOS and the CIAs are not run on a console from there). See [macOS / arm64](docs/EN/USAGE.md#macos--arm64).
 
 ## Requirements
 

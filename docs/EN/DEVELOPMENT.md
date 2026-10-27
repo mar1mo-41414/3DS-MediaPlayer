@@ -19,7 +19,7 @@ docs/           documentation
 makerom, bannertool and 3dstool.
 
 ```bash
-scripts/setup-tools.sh        # builds bannertool, 3dstool and makerom into tools/bin/ (needs git, make, cmake, g++, libssl-dev)
+scripts/setup-tools.sh        # builds bannertool, 3dstool and makerom into tools/bin/ (needs git, make, cmake, g++, libssl-dev, python3; arm64 / macOS: see USAGE)
 ```
 
 The sources are pinned to known-good revisions (commits/tags). `makerom` is not built if one is already on `PATH` or in `tools/bin/`.

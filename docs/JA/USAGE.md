@@ -157,6 +157,19 @@ scripts\mkcia-gui.cmd
   名前のフォルダに置くこと。ASCII だけが最も安全。出力ファイルの権限はフォルダから継承した普通のものになる。
 - Windows では使えないもの: ROM 自体のビルド用シェルスクリプト (`build-rom.sh` など。Docker/devkitPro が要るので、ROM を開発するときだけ必要)。
 
+## macOS / arm64
+
+同じ `scripts/setup-tools.sh` / `scripts/mkcia.sh` が **arm64 の Linux** と **Apple Silicon の macOS** でも使える。`bannertool` と `3dstool` の
+上流のビルドファイルは x86 しか想定していないので、取得した直後にスクリプトが直す (arm64 のホストを受け付ける。`3dstool` 同梱の x86 専用の
+事前ビルド済みライブラリは使わず、システムの OpenSSL / libcurl を使う)。
+
+- Debian/Ubuntu arm64: `sudo apt install git make cmake g++ libssl-dev libcurl4-openssl-dev ffmpeg python3`
+- macOS: `brew install cmake openssl@3 ffmpeg` (Homebrew の `openssl@3` はスクリプトが自分で探す。ssh 越しのような非ログインシェルで PATH に無くても見つける。
+  別の場所なら `OPENSSL_ROOT_DIR=<prefix>` を付ける)。macOS には OpenSSL のヘッダが標準で無いので、無ければメッセージを出して止まる。
+  GUI には `python3 -m tkinter` が動くことが必要 (Homebrew: `brew install python-tk`)。
+- 確認済み: arm64 の Ubuntu と M4 の Mac で、3 つのツールのビルド、`example` のビルド、全テスト (GUI テストは画面が無くスキップ) が通り、
+  CIA の ExHeader / ExeFS は x86_64 の Linux で作ったものとバイト一致。未確認: macOS の GUI と、そこで作った CIA を実機で動かすこと。
+
 ## 操作 (3DS 側)
 
 - **START**: 再生中いつでも終了してホームメニューに戻る。

@@ -19,7 +19,7 @@ docs/           ドキュメント
 makerom、bannertool、3dstool。
 
 ```bash
-scripts/setup-tools.sh        # tools/bin/ に bannertool, 3dstool, makerom をビルド (要 git, make, cmake, g++, libssl-dev)
+scripts/setup-tools.sh        # tools/bin/ に bannertool, 3dstool, makerom をビルド (要 git, make, cmake, g++, libssl-dev, python3。arm64 / macOS は USAGE 参照)
 ```
 
 ソースは動作確認した版 (コミット/タグ) に固定してある。`makerom` は PATH 上や `tools/bin/` に既にあればビルドしない。

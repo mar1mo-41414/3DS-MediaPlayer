@@ -278,14 +278,26 @@
 - 画面のスクリーンショットは、VM のデスクトップセッションが切断状態で `CopyFromScreen` が失敗したため撮れていない (GUI の起動と生存、
   GUI テスト 56 件の成功までは確認)。macOS は未確認。
 
-### arm64 Linux / macOS は非対応 (2026-10-27 ユーザー報告)
-- Ubuntu arm64 で `scripts/setup-tools.sh` を実行すると、bannertool のビルドが `buildtools/make_base:171: "Unsupported host architecture."` で止まる。
-  bannertool の上流 (Steveice10/buildtools) のホスト判定が x86_64 / i686 しか持たないため。macOS も同様に非対応と報告された
-  (Mac は OS としては Darwin を認識できるが、M4 など Apple Silicon は arm64 なので、アーキテクチャの判定で同じく弾かれるはず、
-  というのがユーザーの推測。筋が通っている。)
-- 対応: 時間をかける前に分かりやすく止める事前チェックを `setup-tools.sh` に入れ、README に非対応を明記した。arm64 対応そのもの
-  (buildtools の判定を直す、bannertool の SMDH / banner 生成を Python で自前実装する等) は未着手。makerom / 3dstool が arm64 で
-  ビルドできるかも未確認。
+### arm64 Linux / Apple Silicon macOS に対応 (2026-10-27)
+- きっかけ: Ubuntu arm64 と M4 Mac で `scripts/setup-tools.sh` を実行すると、bannertool のビルドが
+  `buildtools/make_base:171: "Unsupported host architecture."` で止まるとユーザーが報告。Mac も原因は同じで、OS は Darwin を認識できても、
+  アーキテクチャ (arm64) が x86_64 / i686 以外として弾かれる (ユーザーの推測どおり)。bannertool の README の Docker 手順も、
+  arm64 のホストでは arm64 のコンテナになるので同じ所で止まる。
+- 一度は「非対応」と明記して事前に止める対処を入れたが、ネイティブビルドはコンパイラ任せなので `make_base` の判定に
+  `arm64 aarch64` を足すだけで通ると分かり、取り下げた (最初に実機/コンテナで試さず書いたのが間違い)。
+- 直した所 (すべて `setup-tools.sh` が取得直後に当てる。上流のリポジトリは触らない):
+  - bannertool の `buildtools/make_base`: `arm64` / `aarch64` を受け付ける。
+  - 3dstool の `CMakeLists.txt`: arm64 のコンパイラは `-m64` を受け付けないので、arm64 では付けない。同梱の `dep/lib` は x86 専用の
+    事前ビルド済みライブラリなので `-DUSE_DEP=OFF` にしてシステムの OpenSSL / libcurl を使う。
+  - macOS: `nproc` が無いので `sysctl -n hw.ncpu`。OpenSSL のヘッダが標準で無いので、`OPENSSL_ROOT_DIR` > Homebrew の `openssl@3` を探し、
+    無ければ案内を出して止まる。
+  - 出力先 (`output/<os>-<arch>/bannertool`) を実行環境から決める。
+- 検証 (すべてネイティブ): arm64 Ubuntu 実機と M4 Mac の両方で、3 ツールのビルド、`example` の CIA 生成、全 440 テスト (GUI 56 件は画面が無くスキップ)
+  が通った。CIA の ExHeader / ExeFS は x86_64 Linux の CI 産とバイト一致 (arm64 Ubuntu 産はサイズも同一)。
+- Mac での嵌り: ssh の非ログインシェルは `/opt/homebrew/bin` が PATH に無く、Homebrew が入っていても `which brew` で見つからない
+  (cmake / ffmpeg / openssl も同様)。スクリプトは `/opt/homebrew/bin/brew` と `/usr/local/bin/brew` も直接見るようにした。
+- 未確認: macOS の GUI、arm64 / macOS で作った CIA の実機での再生 (ExHeader / ExeFS が一致しているので差が出るのは動画 RomFS のみのはず)、
+  Intel Mac。
 
 ## 未解決・今後
 - 旧3DS: `light` / `medium` は映像・音声とも滑らか、タイトル音・終了時のフェードアウトも確認済み。
